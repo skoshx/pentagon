@@ -1,4 +1,8 @@
-import { add } from "./main.ts";
+// import { add } from "../main.ts";
+
+function add(a: number, b: number) {
+  return a + b;
+}
 
 Deno.bench(function addSmall() {
   add(1, 2);

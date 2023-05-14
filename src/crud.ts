@@ -1,6 +1,7 @@
 // CRUD operations
 import { z } from "../deps.ts";
-import { PentagonCreateItemError } from "./errors.ts";
+import { PentagonCreateItemError, PentagonKeyError } from "./errors.ts";
+import { AccessKey, CreatedOrUpdatedItem } from "./types.ts";
 
 /** Some reference code
 
@@ -26,17 +27,38 @@ async function getUser(id: string): Promise<User | null> {
 async function getUserByEmail(email: string): Promise<User | null> {
   const res = await kv.get<User>(["users_by_email", email]);
   return res.value;
-}
+}*/
 
- */
+/*
 
-export async function create<T extends ReturnType<typeof z.object>>(
+Create `where` limitations to everything
+-> Where is used to create limitations
+
+2 different cases:
+
+if we're searching by an index (primary key or index)
+-> then just search by those keys
+
+-> otherwise, we need to perform a `listAll`, then
+	filter by our `where` clause.
+
+->
+where: {  }
+
+*/
+
+/*
+Indexed keys:
+
+
+*/
+
+/* export async function create<T extends ReturnType<typeof z.object>>(
   kv: Deno.Kv,
   tableName: string,
-  primaryKeyValue: string,
   item: T,
-  secondaryKeys: [],
-) {
+  key: AccessKey,
+): Promise<CreatedOrUpdatedItem<T>> {
   const primaryKey = [tableName, primaryKeyValue];
   // @todo: secondary keys
   const res = await kv.atomic()
@@ -54,14 +76,6 @@ export async function create<T extends ReturnType<typeof z.object>>(
   }
   throw new PentagonCreateItemError(`Could not create item.`);
 }
-
-type SecondaryKey = Record<string, string>;
-type PrimaryKey = string;
-
-type AccessKey = {
-  primaryKey?: PrimaryKey;
-  secondaryKey?: SecondaryKey;
-};
 
 export async function read<T extends ReturnType<typeof z.object>>(
   kv: Deno.Kv,
@@ -97,9 +111,6 @@ export async function update<T extends ReturnType<typeof z.object>>(
   throw new Error("Please provide either `primaryKey` or `secondaryKey`.");
 }
 
-/*
-remove({ where: { email: 'something' } })
-*/
 
 export async function remove<T extends ReturnType<typeof z.object>>(
   kv: Deno.Kv,
@@ -115,4 +126,4 @@ export async function remove<T extends ReturnType<typeof z.object>>(
   }
 
   throw new Error("Please provide either `primaryKey` or `secondaryKey`.");
-}
+} */
