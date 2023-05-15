@@ -1,5 +1,6 @@
 import { z } from "../deps.ts";
 import { createPentagon } from "../src/pentagon.ts";
+import { CreatedOrUpdatedItem } from "../src/types.ts";
 
 export const User = z.object({
   id: z.string().uuid().describe("primary, unique"),
@@ -14,8 +15,14 @@ export const Order = z.object({
   userId: z.string().uuid(),
 });
 
-export async function createMockDatabase() {
-  const kv = await Deno.openKv();
+export function removeVersionstamp<T>(item: CreatedOrUpdatedItem<T>): T {
+  const { versionstamp: _versionstamp, ...rest } = item;
+  return rest as T;
+}
+
+export const kv = await Deno.openKv();
+
+export function createMockDatabase() {
   return createPentagon(kv, {
     users: {
       schema: User,
@@ -53,10 +60,27 @@ export async function populateMockDatabase(
   });
 }
 
+export async function dumpUsers() {
+  const kv = await Deno.openKv();
+  for await (const x of kv.list({ prefix: ["users"] })) {
+    console.log("User: ");
+    console.log(x);
+  }
+  await kv.close();
+}
+
 export async function clearMocks(
   db: Awaited<ReturnType<typeof createMockDatabase>>,
 ) {
-  await db.users.delete({
-    where: { id: "67218087-d9a8-4a57-b058-adc01f179ff9" },
-  });
+  const kv = await Deno.openKv();
+  for await (const x of kv.list({ prefix: ["users"] })) {
+    await kv.delete(x.key);
+  }
+  for await (const x of kv.list({ prefix: ["orders"] })) {
+    await kv.delete(x.key);
+  }
+  await kv.close();
+  // await
+  // await db.close()
+  // await db.users.deleteMany({});
 }

@@ -1,8 +1,12 @@
-import { assertStrictEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertStrictEquals,
+} from "https://deno.land/std@0.186.0/testing/asserts.ts";
 import {
   clearMocks,
   createMockDatabase,
   populateMockDatabase,
+  removeVersionstamp,
 } from "./util.ts";
 
 Deno.test("include", async (t) => {
@@ -13,12 +17,11 @@ Deno.test("include", async (t) => {
     const userWithOrders = await db.users.findFirst({
       where: { name: "John Doe" },
       include: {
-        myOrders: {
-          name: true,
-        },
+        myOrders: true,
       },
     });
-    assertStrictEquals(userWithOrders, {
+
+    assertEquals(userWithOrders, {
       createdAt: new Date(0),
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "John Doe",
@@ -40,7 +43,11 @@ Deno.test("include", async (t) => {
         },
       },
     });
-    assertStrictEquals(userWithPartialOrders, {
+
+    // @todo: this shouldn't give TS errors
+    const myOrders = userWithPartialOrders.myOrders;
+
+    assertEquals(removeVersionstamp(userWithPartialOrders), {
       createdAt: new Date(0),
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "John Doe",

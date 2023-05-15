@@ -26,7 +26,7 @@ export function parseKeyProperties(keyPropertyString: string): KeyProperty[] {
 export function schemaToKeys<T extends ReturnType<typeof z.object>>(
   schema: T,
   values: Partial<z.input<T>>,
-): AccessKey[] | undefined {
+): AccessKey[] {
   const keys: AccessKey[] = [];
 
   for (const [key, value] of Object.entries(schema.shape)) {

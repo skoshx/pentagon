@@ -1,129 +1,129 @@
 // CRUD operations
-import { z } from "../deps.ts";
-import { PentagonCreateItemError, PentagonKeyError } from "./errors.ts";
-import { AccessKey, CreatedOrUpdatedItem } from "./types.ts";
+import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
+import { DatabaseValue, WithVersionstamp } from "./types.ts";
 
-/** Some reference code
+function chainAccessKeyCheck(
+  op: Deno.AtomicOperation,
+  key: Deno.KvKey,
+  versionstamp: string | null = null,
+) {
+  return op.check({ key: key, versionstamp });
+}
 
-async function insertUser(user: User) {
-  const primaryKey = ["users", user.id];
-  const byEmailKey = ["users_by_email", user.email];
-  const res = await kv.atomic()
-    .check({ key: primaryKey, versionstamp: null })
-    .check({ key: byEmailKey, versionstamp: null })
-    .set(primaryKey, user)
-    .set(byEmailKey, user)
-    .commit();
-  if (res === null) {
-    throw new TypeError("User with ID or email already exists");
+function chainSet<T>(op: Deno.AtomicOperation, key: Deno.KvKey, item: T) {
+  return op.set(key, item);
+}
+
+function chainDelete<T>(op: Deno.AtomicOperation, key: Deno.KvKey) {
+  return op.delete(key);
+}
+
+export async function listTable<T>(kv: Deno.Kv, tableName: string) {
+  const items: Deno.KvEntry<T>[] = [];
+  for await (const item of kv.list<T>({ prefix: [tableName] })) {
+    items.push(item);
   }
+  return items;
 }
 
-async function getUser(id: string): Promise<User | null> {
-  const res = await kv.get<User>(["users", id]);
-  return res.value;
+export async function read<T extends Record<string, DatabaseValue>>(
+  kv: Deno.Kv,
+  keys: Deno.KvKey[],
+): Promise<WithVersionstamp<T>> {
+  for (let i = 0; i < keys.length; i++) {
+    const res = await kv.get<T>(keys[i]);
+    if (res.value) {
+      return {
+        ...res.value,
+        versionstamp: res.versionstamp,
+      };
+    }
+  }
+  throw new Error(`Could not find anything TODO  fix this error`);
 }
 
-async function getUserByEmail(email: string): Promise<User | null> {
-  const res = await kv.get<User>(["users_by_email", email]);
-  return res.value;
-}*/
+export async function remove(
+  kv: Deno.Kv,
+  keys: Deno.KvKey[],
+): Promise<WithVersionstamp<Record<string, DatabaseValue>>> {
+  let res = kv.atomic();
 
-/*
+  for (let i = 0; i < keys.length; i++) {
+    res = chainAccessKeyCheck(res, keys[i], null);
+  }
 
-Create `where` limitations to everything
--> Where is used to create limitations
+  for (let i = 0; i < keys.length; i++) {
+    res = chainDelete(res, keys[i]);
+  }
 
-2 different cases:
+  const commitResult = await res.commit();
 
-if we're searching by an index (primary key or index)
--> then just search by those keys
+  if (commitResult.ok) {
+    return {
+      versionstamp: commitResult.versionstamp,
+    };
+  }
+  throw new PentagonDeleteItemError(`Could not delete item.`);
+}
 
--> otherwise, we need to perform a `listAll`, then
-	filter by our `where` clause.
+export async function update<T extends Record<string, DatabaseValue>>(
+  kv: Deno.Kv,
+  tableName: string,
+  item: T | WithVersionstamp<T>,
+  keys: Deno.KvKey[],
+): Promise<WithVersionstamp<T>> {
+  let res = kv.atomic();
 
-->
-where: {  }
+  // Checks
+  for (let i = 0; i < keys.length; i++) {
+    res = chainAccessKeyCheck(
+      res,
+      keys[i],
+      (item.versionstamp as string) ?? null,
+    );
+  }
 
-*/
+  // Sets
+  for (let i = 0; i < keys.length; i++) {
+    res = chainSet(res, keys[i], item);
+  }
 
-/*
-Indexed keys:
+  const commitResult = await res.commit();
 
+  if (commitResult.ok) {
+    return {
+      ...item,
+      versionstamp: commitResult.versionstamp,
+    };
+  }
+  throw new PentagonCreateItemError(`Could not update item.`);
+}
 
-*/
-
-/* export async function create<T extends ReturnType<typeof z.object>>(
+export async function create<T extends Record<string, DatabaseValue>>(
   kv: Deno.Kv,
   tableName: string,
   item: T,
-  key: AccessKey,
-): Promise<CreatedOrUpdatedItem<T>> {
-  const primaryKey = [tableName, primaryKeyValue];
-  // @todo: secondary keys
-  const res = await kv.atomic()
-    .check({ key: primaryKey, versionstamp: null })
-    // .check({ key: byEmailKey, versionstamp: null })
-    .set(primaryKey, item)
-    // .set(byEmailKey, user)
-    .commit();
+  keys: Deno.KvKey[],
+): Promise<WithVersionstamp<T>> {
+  let res = kv.atomic();
 
-  if (res.ok) {
+  // Checks
+  for (let i = 0; i < keys.length; i++) {
+    res = chainAccessKeyCheck(res, keys[i]);
+  }
+
+  // Sets
+  for (let i = 0; i < keys.length; i++) {
+    res = chainSet(res, keys[i], item);
+  }
+
+  const commitResult = await res.commit();
+
+  if (commitResult.ok) {
     return {
       ...item,
-      versionstamp: res.versionstamp,
+      versionstamp: commitResult.versionstamp,
     };
   }
   throw new PentagonCreateItemError(`Could not create item.`);
 }
-
-export async function read<T extends ReturnType<typeof z.object>>(
-  kv: Deno.Kv,
-  tableName: string,
-  key: AccessKey,
-) {
-  if (key.primaryKey) {
-    const res = await kv.get<T>([tableName, key.primaryKey]);
-    return res.value;
-  } else if (key.secondaryKey) {
-    for (const [keyValue, value] of Object.entries(key.secondaryKey)) {
-      const res = await kv.get<T>([`${tableName}_by_${keyValue}`, value]);
-      return res.value;
-    }
-  }
-
-  throw new Error("Please provide either `primaryKey` or `secondaryKey`.");
-}
-
-export async function update<T extends ReturnType<typeof z.object>>(
-  kv: Deno.Kv,
-  tableName: string,
-  key: AccessKey,
-) {
-  if (key.primaryKey) {
-    const res = await kv.get<T>([`${tableName}`, value]);
-    return res.value;
-  } else if (key.secondaryKey) {
-    const res = await kv.get<T>([`${tableName}_by_${keyValue}`, value]);
-    return res.value;
-  }
-
-  throw new Error("Please provide either `primaryKey` or `secondaryKey`.");
-}
-
-
-export async function remove<T extends ReturnType<typeof z.object>>(
-  kv: Deno.Kv,
-  tableName: string,
-  key: AccessKey,
-) {
-  if (key.primaryKey) {
-    const res = await kv.get<T>([`${tableName}`, value]);
-    return res.value;
-  } else if (key.secondaryKey) {
-    const res = await kv.get<T>([`${tableName}_by_${keyValue}`, value]);
-    return res.value;
-  }
-
-  throw new Error("Please provide either `primaryKey` or `secondaryKey`.");
-} */

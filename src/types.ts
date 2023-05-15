@@ -3,11 +3,17 @@ import { KeyPropertySchema } from "./keys.ts";
 
 export type PentagonResult<T extends Record<string, TableDefinition>> = {
   [K in keyof T]: {
-    findFirst: (args: QueryArgs<T[K]>) => QueryResponse<T[K]>;
-    findFirstOrThrow: (args: QueryArgs<T[K]>) => QueryResponse<T[K]>;
-    findMany: (args: QueryArgs<T[K]>) => Array<QueryResponse<T[K]>>;
-    findUnique: (args: QueryArgs<T[K]>) => QueryResponse<T[K]>;
-    findUniqueOrThrow: (args: QueryArgs<T[K]>) => QueryResponse<T[K]>;
+    findFirst: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
+    findFirstOrThrow: (
+      args: QueryArgs<T[K]>,
+    ) => QueryResponse<T[K], typeof args>;
+    findMany: (
+      args: QueryArgs<T[K]>,
+    ) => Array<QueryResponse<T[K], typeof args>>;
+    findUnique: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
+    findUniqueOrThrow: (
+      args: QueryArgs<T[K]>,
+    ) => QueryResponse<T[K], typeof args>;
     create: (args: CreateAndUpdateArgs<T[K]>) => CreateAndUpdateResponse<T[K]>;
     createMany: (
       args: CreateAndUpdateArgs<T[K]>,
@@ -18,12 +24,22 @@ export type PentagonResult<T extends Record<string, TableDefinition>> = {
     ) => Array<CreateAndUpdateResponse<T[K]>>;
     upsert: (args: CreateAndUpdateArgs<T[K]>) => CreateAndUpdateResponse<T[K]>;
     count: (args: QueryArgs<T[K]>) => number;
-    delete: (args: QueryArgs<T[K]>) => QueryResponse<T[K]>;
-    deleteMany: (args: QueryArgs<T[K]>) => Array<QueryResponse<T[K]>>;
-    aggregate: (args: QueryArgs<T[K]>) => QueryResponse<T[K]>;
+    delete: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
+    deleteMany: (
+      args: QueryArgs<T[K]>,
+    ) => Array<QueryResponse<T[K], typeof args>>;
+    aggregate: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
   };
-};
+}; /*  & {
+  // Built-in functions
+  close: () => Promise<void>;
+  getKv: () => Deno.Kv;
+}; */
 
+// @todo rename to something like WithVersionstamp
+export type WithVersionstamp<T> = T & {
+  versionstamp: string | null;
+};
 export type CreatedOrUpdatedItem<T> = T & {
   versionstamp: string;
 };
@@ -50,17 +66,32 @@ export type TableDefinition = {
   relations?: Record<string, RelationDefinition>;
 };
 
-export type QueryResponse<T extends TableDefinition> = z.output<T["schema"]>;
-export type CreateAndUpdateResponse<T extends TableDefinition> = z.output<
-  T["schema"]
->;
+/* export type QueryResponse<T extends TableDefinition> = CreatedOrUpdatedItem<
+  z.output<T["schema"]>
+>; */
+
+export type QueryResponse<
+  T extends TableDefinition,
+  PassedInArgs extends QueryArgs<T>,
+> = WithVersionstamp<
+  // @todo: these types need fixing
+  z.output<T["schema"]>
+>; // & PassedInArgs['include'] extends undefined ? {} : PassedInArgs['include']
+
+export type DeleteResponse = { versionstamp: string };
+export type CreateAndUpdateResponse<T extends TableDefinition> =
+  CreatedOrUpdatedItem<
+    z.output<
+      T["schema"]
+    >
+  >;
 
 export type CreateAndUpdateArgs<T extends TableDefinition> = QueryArgs<T> & {
   data: Partial<z.input<T["schema"]>>;
 };
 
 type QueryArgs<T extends TableDefinition> = {
-  where?: Partial<z.infer<T["schema"]>>;
+  where?: Partial<z.infer<T["schema"]> & WithVersionstamp<T>>;
   take?: number;
   skip?: number;
   select?: Partial<z.infer<T["schema"]>>;
@@ -79,10 +110,6 @@ type QueryArgs<T extends TableDefinition> = {
   // kvOptions?: Parameters<typeof Deno.Kv>[1];
 };
 
-// CRUD types
-/* export type SecondaryKey = Record<string, string>;
-export type PrimaryKey = string; */
-
 export type AccessKey = {
   primary?: true;
   suffix?: string; // eg. "_by_email"
@@ -91,3 +118,18 @@ export type AccessKey = {
 };
 
 export type KeyProperty = z.infer<typeof KeyPropertySchema>;
+
+export type DatabaseValue<T = unknown> =
+  | undefined
+  | null
+  | boolean
+  | number
+  | string
+  | bigint
+  | Uint8Array
+  | Array<T>
+  | Object
+  | Map<any, any>
+  | Set<T>
+  | Date
+  | RegExp;
