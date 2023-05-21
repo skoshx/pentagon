@@ -99,10 +99,10 @@ export async function whereToKeys<T extends TableDefinition>(
   return findItemsBySearch(schemaItems, where);
 }
 
-// @ts-expect-error: not sure how to get this to work without the `Type 'keyof Items' does not satisfy the constraint 'keyof T'` error.
 export function selectFromEntry<T, Items = Partial<{ [K in keyof T]: true }>>(
   items: Deno.KvEntry<T>[],
   selectItems: Items,
+  // @ts-expect-error: not sure how to get this to work without the `Type 'keyof Items' does not satisfy the constraint 'keyof T'` error.
 ): Deno.KvEntry<Pick<T, keyof Items>>[] {
   // @ts-expect-error: fix types
   const selectedValues: Deno.KvEntry<Pick<T, keyof Items>>[] = [

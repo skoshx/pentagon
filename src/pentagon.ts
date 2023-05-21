@@ -1,11 +1,6 @@
 import { z } from "../deps.ts";
-import { create, listTable, read, remove, update } from "./crud.ts";
-import {
-  keysToIndexes,
-  schemaToKeys,
-  selectFromEntry,
-  whereToKeys,
-} from "./keys.ts";
+import { create, findMany, listTable, read, remove, update } from "./crud.ts";
+import { keysToIndexes, schemaToKeys } from "./keys.ts";
 import { findItemsBySearch } from "./search.ts";
 import { PentagonResult, TableDefinition } from "./types.ts";
 
@@ -14,10 +9,9 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
   schema: T,
 ) {
   const result: Partial<PentagonResult<T>> = {};
-
-  // TODO: Run through schemas, validate `description`
-  // TODO: Run through schemas, validate `relations` like Prisma
-  // TODO: add all properties
+  // @todo(skoshx): Run through schemas, validate `description`
+  // @todo(skoshx): Run through schemas, validate `relations`
+  // @todo(skoshx): Add all properties
   for (const [tableName, value] of Object.entries(schema)) {
     // @ts-ignore
     result[tableName as keyof T] = {
@@ -27,12 +21,16 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
 
         return await create(kv, tableName, createOrUpdateArgs.data, indexKeys);
       },
+      // @todo(skoshx): refactor these using `whereToKeys` function
+      // like we refactored `findMany` and `findFirst`
       delete: async (queryArgs) => {
         const keys = schemaToKeys(value.schema, queryArgs.where ?? []);
         const indexKeys = keysToIndexes(tableName, keys);
 
         return await remove(kv, indexKeys);
       },
+      // @todo(skoshx): refactor these using `whereToKeys` function
+      // like we refactored `findMany` and `findFirst`
       deleteMany: async (queryArgs) => {
         const keys = schemaToKeys(value.schema, queryArgs.where ?? []);
         const indexKeys = keysToIndexes(tableName, keys);
@@ -40,6 +38,8 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
         return await remove(kv, indexKeys);
       },
 
+      // @todo(skoshx): refactor these using `whereToKeys` function
+      // like we refactored `findMany` and `findFirst`
       update: async (updateArgs) => {
         const keys = schemaToKeys(value.schema, updateArgs.where ?? []);
         const indexKeys = keysToIndexes(tableName, keys);
@@ -79,74 +79,14 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
       },
 
       findMany: async (queryArgs) => {
-        const keys = schemaToKeys(value.schema, queryArgs.where ?? []);
-        const indexKeys = keysToIndexes(tableName, keys);
-        const foundItems = await whereToKeys(
-          kv,
-          tableName,
-          indexKeys,
-          queryArgs.where ?? {},
-        );
-
-        // Include
-
-        // Select
-        const selectedItems = queryArgs.select
-          ? selectFromEntry(foundItems, queryArgs.select)
-          : foundItems;
-
-        return selectedItems.map((item) => item.value);
+        // @ts-ignore
+        return await findMany(kv, tableName, value, queryArgs);
       },
 
       // findFirst is just findMany[0]
       findFirst: async (queryArgs) => {
-        const keys = schemaToKeys(value.schema, queryArgs.where ?? []);
-        const indexKeys = keysToIndexes(tableName, keys);
-        const foundItems = await whereToKeys(
-          kv,
-          tableName,
-          indexKeys,
-          queryArgs.where ?? {},
-        );
-
-        // Include
-        const includedThing = await (async () => {
-          const keys = schemaToKeys(value.schema, queryArgs.where ?? []);
-          const indexKeys = keysToIndexes(tableName, keys);
-          // @todo: where in our case is our found items (Also we need to iterate foundItems, and add includes)
-          // but it's foundItems .`userId` -> because `userId` is the foreign key
-          const foundItems = await whereToKeys(
-            kv,
-            tableName,
-            indexKeys,
-            queryArgs.where ?? {},
-          );
-
-          return 2;
-        })();
-
-        // Select
-        const selectedItems = queryArgs.select
-          ? selectFromEntry(foundItems, queryArgs.select)
-          : foundItems;
-
-        return selectedItems.map((item) => item.value)?.[0];
-        /* const keys = schemaToKeys(value.schema, queryArgs.where ?? []);
-        const indexKeys = keysToIndexes(tableName, keys);
-
-        if (indexKeys.length === 0) {
-          const schemaItems = await listTable<
-            z.infer<T[typeof tableName]["schema"]>
-          >(kv, tableName);
-          const foundItems = findItemsBySearch(
-            schemaItems,
-            queryArgs.where ?? {},
-          );
-
-          return await read(kv, foundItems.map((item) => item.key));
-        }
-
-        return await read(kv, indexKeys); */
+        // @ts-ignore
+        return (await findMany(kv, tableName, value, queryArgs))?.[0];
       },
     };
   }

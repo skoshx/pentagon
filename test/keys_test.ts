@@ -98,7 +98,6 @@ Deno.test("whereToKeys", async (t) => {
     };
     const accessKeys = schemaToKeys(User, whereQuery);
     const indexKeys = keysToIndexes("users", accessKeys);
-    console.log(indexKeys);
     const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
     assertEquals(removeVersionstamps(foundItems), [
       {

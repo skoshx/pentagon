@@ -1,6 +1,19 @@
 // CRUD operations
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
-import { DatabaseValue, KvOptions, WithVersionstamp } from "./types.ts";
+import {
+  keysToIndexes,
+  schemaToKeys,
+  selectFromEntry,
+  whereToKeys,
+} from "./keys.ts";
+import { getRelationSchema, isToManyRelation } from "./relation.ts";
+import {
+  DatabaseValue,
+  KvOptions,
+  QueryArgs,
+  TableDefinition,
+  WithVersionstamp,
+} from "./types.ts";
 
 function chainAccessKeyCheck(
   op: Deno.AtomicOperation,
@@ -31,7 +44,6 @@ export async function newRead<T extends readonly unknown[]>(
   keys: Deno.KvKey[],
   kvOptions?: KvOptions,
 ) {
-  // for (let i )
   // @ts-ignore
   const res = await kv.getMany<T>(keys, kvOptions);
   return res;
@@ -40,7 +52,7 @@ export async function newRead<T extends readonly unknown[]>(
 export async function read<T extends Record<string, DatabaseValue>>(
   kv: Deno.Kv,
   keys: Deno.KvKey[],
-): Promise<WithVersionstamp<T>> {
+): Promise<WithVersionstamp<T> | undefined> {
   for (let i = 0; i < keys.length; i++) {
     const res = await kv.get<T>(keys[i]);
     if (res.value) {
@@ -50,7 +62,6 @@ export async function read<T extends Record<string, DatabaseValue>>(
       };
     }
   }
-  throw new Error(`Could not find anything TODO  fix this error`);
 }
 
 export async function remove(
@@ -137,4 +148,91 @@ export async function create<T extends Record<string, DatabaseValue>>(
     };
   }
   throw new PentagonCreateItemError(`Could not create item.`);
+}
+
+// findMany, deleteMany, updateMany, etc
+
+export async function findMany<T extends TableDefinition>(
+  kv: Deno.Kv,
+  tableName: string,
+  tableDefinition: T,
+  queryArgs: QueryArgs<T>,
+) {
+  const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
+  const indexKeys = keysToIndexes(tableName, keys);
+  const foundItems = await whereToKeys(
+    kv,
+    tableName,
+    indexKeys,
+    queryArgs.where ?? {},
+  );
+
+  // Include
+
+  if (queryArgs.include) {
+    for (
+      const [relationName, relationValue] of Object.entries(queryArgs.include)
+    ) {
+      // Relation name
+      const relationDefinition = tableDefinition.relations?.[relationName];
+      if (!relationDefinition) {
+        throw new Error(
+          `No relation found for relation name "${relationName}", make sure it's ∂efined in your Pentagon configuration.`,
+        );
+      }
+
+      const relationSchema = getRelationSchema(relationDefinition);
+      // @ts-ignore
+      const keys = schemaToKeys(
+        relationSchema,
+        // @ts-ignore
+        relationValue === true ? {} : relationValue,
+      );
+      const indexKeys = keysToIndexes(relationDefinition[0], keys);
+
+      const relationFoundItems = await whereToKeys(
+        kv,
+        relationDefinition[0],
+        indexKeys,
+        {},
+      );
+
+      for (let i = 0; i < foundItems.length; i++) {
+        if (isToManyRelation(relationDefinition)) {
+          // @ts-ignore
+          if (!foundItems[i].value[relationName]) {
+            // @ts-ignore
+            foundItems[i].value[relationName] = [];
+          }
+
+          if (typeof relationValue === "object") {
+            // Partial include
+            // @ts-ignore:
+            foundItems[i].value[relationName].push(
+              ...selectFromEntry(
+                [relationFoundItems[i]],
+                // @ts-ignore
+                relationValue === true ? {} : relationValue,
+              ).map((i) => i.value),
+            );
+          } else {
+            // @ts-ignore
+            foundItems[i].value[relationName].push(
+              relationFoundItems[i].value,
+            );
+          }
+        } else {
+          // @ts-ignore: bad at types
+          foundItems[i].value[relationName] = relationFoundItems[i].value;
+        }
+      }
+    }
+  }
+
+  // Select
+  const selectedItems = queryArgs.select
+    ? selectFromEntry(foundItems, queryArgs.select)
+    : foundItems;
+
+  return selectedItems.map((item) => item.value);
 }

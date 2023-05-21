@@ -69,15 +69,6 @@ export async function populateMockDatabase(
   });
 }
 
-export async function dumpUsers() {
-  const kv = await Deno.openKv();
-  for await (const x of kv.list({ prefix: ["users"] })) {
-    console.log("User: ");
-    console.log(x);
-  }
-  await kv.close();
-}
-
 export async function clearMocks(
   db: Awaited<ReturnType<typeof createMockDatabase>>,
 ) {
