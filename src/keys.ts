@@ -1,6 +1,8 @@
 import { z } from "../deps.ts";
+import { listTable, newRead, read } from "./crud.ts";
 import { PentagonKeyError } from "./errors.ts";
-import { AccessKey, KeyProperty } from "./types.ts";
+import { findItemsBySearch } from "./search.ts";
+import { AccessKey, KeyProperty, QueryArgs, TableDefinition } from "./types.ts";
 
 export const KeyPropertySchema = z.enum(["primary", "unique", "index"]);
 
@@ -81,4 +83,40 @@ export function keysToIndexes(
   }
 
   return keys;
+}
+
+export async function whereToKeys<T extends TableDefinition>(
+  kv: Deno.Kv,
+  tableName: string,
+  indexKeys: Deno.KvKey[],
+  where: QueryArgs<T>["where"],
+) {
+  const schemaItems = indexKeys.length > 0
+    ? await newRead(kv, indexKeys)
+    : await listTable(kv, tableName);
+  // Sort using `where`
+  // @ts-ignore
+  return findItemsBySearch(schemaItems, where);
+}
+
+// @ts-expect-error: not sure how to get this to work without the `Type 'keyof Items' does not satisfy the constraint 'keyof T'` error.
+export function selectFromEntry<T, Items = Partial<{ [K in keyof T]: true }>>(
+  items: Deno.KvEntry<T>[],
+  selectItems: Items,
+): Deno.KvEntry<Pick<T, keyof Items>>[] {
+  // @ts-expect-error: fix types
+  const selectedValues: Deno.KvEntry<Pick<T, keyof Items>>[] = [
+    ...items.map((i) => ({ ...i, value: {} })),
+  ];
+
+  // @ts-expect-error: don't know how to type this
+  for (const [selectKey] of Object.entries(selectItems)) {
+    // selectedValues
+    for (let i = 0; i < selectedValues.length; i++) {
+      // @ts-ignore: cant do types
+      selectedValues[i].value[selectKey] = items[i].value[selectKey];
+    }
+  }
+
+  return selectedValues;
 }

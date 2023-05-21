@@ -48,11 +48,17 @@ export type LocalKey = string;
 export type ForeignKey = string;
 
 /**
- * [schema, local key, foreign key]
+ * [relation name, schema, local key, foreign key]
  */
 export type RelationDefinition = [
   relationSchemaName: string,
-  relationSchema: ReturnType<typeof z.object>,
+  // relationSchema: ReturnType<typeof z.object>,
+  /**
+   * If you provide this as an array, the relation is treated as a
+   * to-many relation, if it's not an array, then its treated as a
+   * to-one relation.
+   */
+  relationSchema: ReturnType<typeof z.object>[] | ReturnType<typeof z.object>,
   /**
    * LocalKey is a string if this schema is the one defining the relation,
    * undefined if this schema is the target of the relation.
@@ -90,7 +96,9 @@ export type CreateAndUpdateArgs<T extends TableDefinition> = QueryArgs<T> & {
   data: Partial<z.input<T["schema"]>>;
 };
 
-type QueryArgs<T extends TableDefinition> = {
+export type KvOptions = Parameters<Deno.Kv["get"]>[1];
+
+export type QueryArgs<T extends TableDefinition> = {
   where?: Partial<z.infer<T["schema"]> & WithVersionstamp<T>>;
   take?: number;
   skip?: number;
@@ -107,7 +115,7 @@ type QueryArgs<T extends TableDefinition> = {
       >;
   };
   distinct?: Array<keyof z.infer<T["schema"]>>;
-  // kvOptions?: Parameters<typeof Deno.Kv>[1];
+  kvOptions?: KvOptions;
 };
 
 export type AccessKey = {

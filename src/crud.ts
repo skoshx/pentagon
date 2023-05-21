@@ -1,6 +1,6 @@
 // CRUD operations
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
-import { DatabaseValue, WithVersionstamp } from "./types.ts";
+import { DatabaseValue, KvOptions, WithVersionstamp } from "./types.ts";
 
 function chainAccessKeyCheck(
   op: Deno.AtomicOperation,
@@ -24,6 +24,17 @@ export async function listTable<T>(kv: Deno.Kv, tableName: string) {
     items.push(item);
   }
   return items;
+}
+
+export async function newRead<T extends readonly unknown[]>(
+  kv: Deno.Kv,
+  keys: Deno.KvKey[],
+  kvOptions?: KvOptions,
+) {
+  // for (let i )
+  // @ts-ignore
+  const res = await kv.getMany<T>(keys, kvOptions);
+  return res;
 }
 
 export async function read<T extends Record<string, DatabaseValue>>(

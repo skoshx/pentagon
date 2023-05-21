@@ -4,8 +4,7 @@ export function findItemsBySearch<T extends Deno.KvEntry<unknown>>(
 ): T[] {
   return items.filter((item) => {
     return Object.entries(searchObj).every(([key, value]) => {
-      // @ts-ignore
-      return item.value[key] === value;
+      return (item.value as Record<string, unknown>)?.[key] === value;
     });
   });
 }

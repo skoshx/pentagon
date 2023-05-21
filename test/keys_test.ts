@@ -1,7 +1,19 @@
 import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
-import { User } from "./util.ts";
+import {
+  clearMocks,
+  createMockDatabase,
+  kv,
+  populateMockDatabase,
+  removeVersionstamps,
+  User,
+} from "./util.ts";
 import { z } from "../deps.ts";
-import { keysToIndexes, schemaToKeys } from "../src/keys.ts";
+import {
+  keysToIndexes,
+  schemaToKeys,
+  selectFromEntry,
+  whereToKeys,
+} from "../src/keys.ts";
 
 Deno.test("schemaToKeys", () => {
   const user: z.infer<typeof User> = {
@@ -30,7 +42,7 @@ Deno.test("schemaToKeys", () => {
   );
 });
 
-Deno.test("transformKeyToIndexes", () => {
+Deno.test("keysToIndexes", () => {
   // Primary key
   assertEquals(
     keysToIndexes("users", [{
@@ -51,4 +63,96 @@ Deno.test("transformKeyToIndexes", () => {
 
   // Indexes for unindexed values (everything other than `primary` & `index` keys)
   assertEquals(keysToIndexes("users", []), []);
+});
+
+Deno.test("whereToKeys", async (t) => {
+  const db = await createMockDatabase();
+  await clearMocks(db);
+  await populateMockDatabase(db);
+
+  await t.step("primary key", async () => {
+    const whereQuery = {
+      id: "67218087-d9a8-4a57-b058-adc01f179ff9",
+    };
+    const accessKeys = schemaToKeys(User, whereQuery);
+    const indexKeys = keysToIndexes("users", accessKeys);
+    const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
+    assertEquals(removeVersionstamps(foundItems), [
+      {
+        key: [
+          "users",
+          "67218087-d9a8-4a57-b058-adc01f179ff9",
+        ],
+        value: {
+          createdAt: new Date(0),
+          id: "67218087-d9a8-4a57-b058-adc01f179ff9",
+          name: "John Doe",
+        },
+      },
+    ]);
+  });
+
+  await t.step("non indexed key", async () => {
+    const whereQuery = {
+      name: "John Doe",
+    };
+    const accessKeys = schemaToKeys(User, whereQuery);
+    const indexKeys = keysToIndexes("users", accessKeys);
+    console.log(indexKeys);
+    const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
+    assertEquals(removeVersionstamps(foundItems), [
+      {
+        key: [
+          "users",
+          "67218087-d9a8-4a57-b058-adc01f179ff9",
+        ],
+        value: {
+          createdAt: new Date(0),
+          id: "67218087-d9a8-4a57-b058-adc01f179ff9",
+          name: "John Doe",
+        },
+      },
+    ]);
+  });
+
+  await t.step("nonexistent keys", async () => {
+    const whereQuery = {
+      id: "nonexistent",
+    };
+    const accessKeys = schemaToKeys(User, whereQuery);
+    const indexKeys = keysToIndexes("users", accessKeys);
+    const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
+    assertEquals(foundItems, []);
+  });
+});
+
+Deno.test("selectFromEntry", (t) => {
+  const mockValue = {
+    createdAt: new Date(0),
+    id: "67218087-d9a8-4a57-b058-adc01f179ff9",
+    name: "John Doe",
+  };
+  const items: Deno.KvEntry<typeof mockValue>[] = [
+    {
+      key: ["mock-key"],
+      value: mockValue,
+      versionstamp: "00000000000",
+    },
+  ];
+
+  const selectedItems = selectFromEntry(items, { id: true });
+
+  assertEquals(selectedItems[0].value.id, mockValue.id);
+  // @ts-expect-error: using expect error as a type test
+  assertEquals(selectedItems[0].value.createdAt, undefined);
+
+  assertEquals(selectFromEntry(items, { id: true }), [
+    {
+      key: ["mock-key"],
+      value: {
+        id: "67218087-d9a8-4a57-b058-adc01f179ff9",
+      },
+      versionstamp: "00000000000",
+    },
+  ]);
 });

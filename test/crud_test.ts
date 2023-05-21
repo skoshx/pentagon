@@ -1,8 +1,4 @@
-import {
-  assert,
-  assertEquals,
-  assertThrows,
-} from "https://deno.land/std@0.186.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
 import {
   clearMocks,
   createMockDatabase,
@@ -15,7 +11,6 @@ import { z } from "../deps.ts";
 Deno.test("Create / Read / Update / Remove", async (t) => {
   const db = await createMockDatabase();
   await clearMocks(db);
-
   await populateMockDatabase(db);
 
   const mockUser: z.infer<typeof User> = {
@@ -75,11 +70,12 @@ Deno.test("Create / Read / Update / Remove", async (t) => {
 			data: { lastName: 'Hello World' }
 		})) */
 
+    // @ts-ignore
     assertEquals(removeVersionstamp(updatedUser), {
       ...mockUser,
-      // ves
       name: "Mock User Updated",
     });
+    // @ts-ignore
     assertEquals(removeVersionstamp(fetchedUpdatedUser), {
       ...mockUser,
       name: "Mock User Updated",

@@ -15,7 +15,16 @@ export const Order = z.object({
   userId: z.string().uuid(),
 });
 
-export function removeVersionstamp<T>(item: CreatedOrUpdatedItem<T>): T {
+export function removeVersionstamps<T = unknown>(items: Deno.KvEntry<T>[]) {
+  return items.map((item) => {
+    const { versionstamp: _versionstamp, ...rest } = item;
+    return rest;
+  });
+}
+
+export function removeVersionstamp<T extends { versionstamp: string | null }>(
+  item: T,
+): T {
   const { versionstamp: _versionstamp, ...rest } = item;
   return rest as T;
 }
@@ -27,7 +36,7 @@ export function createMockDatabase() {
     users: {
       schema: User,
       relations: {
-        myOrders: ["orders", Order, undefined, "userId"],
+        myOrders: ["orders", [Order], undefined, "userId"],
       },
     },
     orders: {
