@@ -70,12 +70,10 @@ Deno.test("Create / Read / Update / Remove", async (t) => {
 			data: { lastName: 'Hello World' }
 		})) */
 
-    // @ts-ignore
     assertEquals(removeVersionstamp(updatedUser), {
       ...mockUser,
       name: "Mock User Updated",
     });
-    // @ts-ignore
     assertEquals(removeVersionstamp(fetchedUpdatedUser), {
       ...mockUser,
       name: "Mock User Updated",
