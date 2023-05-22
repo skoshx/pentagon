@@ -18,8 +18,6 @@
 - Support for `select`
 - ~~Pagination~~ (todo)
 
-[📖 &nbsp;Read more](https://docs.useflytrap.com/features)
-
 ## 💻 Example usage
 
 ```typescript
