@@ -85,7 +85,10 @@ export function keysToIndexes(
   return keys;
 }
 
-export async function whereToKeys<T extends TableDefinition, IndexKeys extends readonly unknown[]>(
+export async function whereToKeys<
+  T extends TableDefinition,
+  IndexKeys extends readonly unknown[],
+>(
   kv: Deno.Kv,
   tableName: string,
   indexKeys: readonly [...{ [K in keyof IndexKeys]: Deno.KvKey }],
@@ -94,7 +97,7 @@ export async function whereToKeys<T extends TableDefinition, IndexKeys extends r
   const schemaItems = indexKeys.length > 0
     ? await newRead(kv, indexKeys)
     : await listTable(kv, tableName);
-  
+
   // Sort using `where`
 
   // the cast to Deno.KvEntry here is unsafe

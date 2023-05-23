@@ -23,7 +23,7 @@ export function removeVersionstamps<T = unknown>(items: Deno.KvEntry<T>[]) {
 
 export function removeVersionstamp<T extends { versionstamp: string | null }>(
   item: T,
-): Omit<T, 'versionstamp'> {
+): Omit<T, "versionstamp"> {
   const { versionstamp: _versionstamp, ...rest } = item;
   return rest;
 }

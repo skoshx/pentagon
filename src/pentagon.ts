@@ -2,7 +2,11 @@ import { z } from "../deps.ts";
 import { create, findMany, listTable, read, remove, update } from "./crud.ts";
 import { keysToIndexes, schemaToKeys } from "./keys.ts";
 import { findItemsBySearch } from "./search.ts";
-import type { PentagonResult, PentagonMethods, TableDefinition } from "./types.ts";
+import type {
+  PentagonMethods,
+  PentagonResult,
+  TableDefinition,
+} from "./types.ts";
 
 export function createPentagon<T extends Record<string, TableDefinition>>(
   kv: Deno.Kv,
@@ -11,32 +15,36 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
   // @todo(skoshx): Run through schemas, validate `description`
   // @todo(skoshx): Run through schemas, validate `relations`
   // @todo(skoshx): Add all properties
-  const result =
-    Object.fromEntries(
-      Object.entries(schema).map(([tableName, tableDefinition]) => {
+  const result = Object.fromEntries(
+    Object.entries(schema).map(([tableName, tableDefinition]) => {
+      const methods: PentagonMethods<typeof tableDefinition> = {
+        create: (createOrUpdateArgs) =>
+          createImpl(kv, tableName, tableDefinition, createOrUpdateArgs),
+        delete: (queryArgs) =>
+          deleteImpl(kv, tableName, tableDefinition, queryArgs),
+        deleteMany: (queryArgs) =>
+          deleteManyImpl(kv, tableName, tableDefinition, queryArgs),
+        update: (queryArgs) =>
+          updateImpl(kv, tableName, tableDefinition, queryArgs),
+        findMany: (queryArgs) =>
+          findManyImpl(kv, tableName, tableDefinition, queryArgs),
+        findFirst: (queryArgs) =>
+          findFirstImpl(kv, tableName, tableDefinition, queryArgs),
+      };
 
-        const methods: PentagonMethods<typeof tableDefinition> = {
-          create    : createOrUpdateArgs => createImpl    (kv, tableName, tableDefinition, createOrUpdateArgs),
-          delete    : queryArgs          => deleteImpl    (kv, tableName, tableDefinition, queryArgs),
-          deleteMany: queryArgs          => deleteManyImpl(kv, tableName, tableDefinition, queryArgs),
-          update    : queryArgs          => updateImpl    (kv, tableName, tableDefinition, queryArgs),
-          findMany  : queryArgs          => findManyImpl  (kv, tableName, tableDefinition, queryArgs),
-          findFirst : queryArgs          => findFirstImpl (kv, tableName, tableDefinition, queryArgs)
-        }
+      return [tableName, methods];
+    }),
+  );
 
-        return [ tableName, methods ]
-      })
-    )
-  
-  return result as PentagonResult<T>
+  return result as PentagonResult<T>;
 }
 
 async function createImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: T,
-  createOrUpdateArgs: Parameters<PentagonMethods<T>['create']>[0]
-): ReturnType<PentagonMethods<T>['create']> {
+  createOrUpdateArgs: Parameters<PentagonMethods<T>["create"]>[0],
+): ReturnType<PentagonMethods<T>["create"]> {
   const keys = schemaToKeys(tableDefinition.schema, createOrUpdateArgs.data);
   const indexKeys = keysToIndexes(tableName, keys);
 
@@ -49,8 +57,8 @@ async function deleteImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: TableDefinition,
-  queryArgs: Parameters<PentagonMethods<T>['delete']>[0]
-): ReturnType<PentagonMethods<T>['delete']> {
+  queryArgs: Parameters<PentagonMethods<T>["delete"]>[0],
+): ReturnType<PentagonMethods<T>["delete"]> {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
 
@@ -63,8 +71,8 @@ async function deleteManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: TableDefinition,
-  queryArgs: Parameters<PentagonMethods<T>['deleteMany']>[0]
-): ReturnType<PentagonMethods<T>['deleteMany']> {
+  queryArgs: Parameters<PentagonMethods<T>["deleteMany"]>[0],
+): ReturnType<PentagonMethods<T>["deleteMany"]> {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
 
@@ -77,8 +85,8 @@ async function updateImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: TableDefinition,
-  updateArgs: Parameters<PentagonMethods<T>['update']>[0]
-): ReturnType<PentagonMethods<T>['update']> {
+  updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
+): ReturnType<PentagonMethods<T>["update"]> {
   const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
 
@@ -90,7 +98,7 @@ async function updateImpl<T extends TableDefinition>(
       schemaItems,
       updateArgs.where ?? {},
     );
-    if (foundItems.length === 0) throw new Error;
+    if (foundItems.length === 0) throw new Error();
     const updatedData = {
       ...foundItems[0].value,
       ...updateArgs.data,
@@ -118,16 +126,22 @@ async function findManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: TableDefinition,
-  queryArgs: Parameters<PentagonMethods<T>['findMany']>[0]
-): ReturnType<PentagonMethods<T>['findMany']> {
-  return await findMany(kv, tableName, tableDefinition, queryArgs as any) as any;
+  queryArgs: Parameters<PentagonMethods<T>["findMany"]>[0],
+): ReturnType<PentagonMethods<T>["findMany"]> {
+  return await findMany(
+    kv,
+    tableName,
+    tableDefinition,
+    queryArgs as any,
+  ) as any;
 }
 
 async function findFirstImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: TableDefinition,
-  queryArgs: Parameters<PentagonMethods<T>['findFirst']>[0]
-): ReturnType<PentagonMethods<T>['findFirst']> {
-  return (await findMany(kv, tableName, tableDefinition, queryArgs as any))?.[0] as any;
+  queryArgs: Parameters<PentagonMethods<T>["findFirst"]>[0],
+): ReturnType<PentagonMethods<T>["findFirst"]> {
+  return (await findMany(kv, tableName, tableDefinition, queryArgs as any))
+    ?.[0] as any;
 }

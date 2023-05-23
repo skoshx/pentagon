@@ -184,7 +184,7 @@ export async function findMany<T extends TableDefinition>(
       const relationSchema = getRelationSchema(relationDefinition);
       const keys = schemaToKeys(
         relationSchema,
-        typeof relationValue === 'boolean' && relationValue === true
+        typeof relationValue === "boolean" && relationValue === true
           ? {}
           : relationValue as any,
       );
@@ -199,27 +199,31 @@ export async function findMany<T extends TableDefinition>(
 
       for (let i = 0; i < foundItems.length; i++) {
         if (isToManyRelation(relationDefinition)) {
-          const entry = foundItems[i]
-          let value : Partial<Record<typeof relationName, unknown[]>>
+          const entry = foundItems[i];
+          let value: Partial<Record<typeof relationName, unknown[]>>;
           if (
-            typeof entry.value !== 'object' ||
+            typeof entry.value !== "object" ||
             entry.value === null ||
             relationName in entry.value === false ||
-            Array.isArray((entry.value as Record<typeof relationName, unknown>)[relationName]) === false
+            Array.isArray(
+                (entry.value as Record<typeof relationName, unknown>)[
+                  relationName
+                ],
+              ) === false
           ) {
-            value = entry.value ??= {}
+            value = entry.value ??= {};
             value[relationName] = [];
           }
 
           // ensured that entry.value is of this type above
-          value ??= entry.value as Record<typeof relationName, unknown[]>
+          value ??= entry.value as Record<typeof relationName, unknown[]>;
 
           if (typeof relationValue === "object") {
             // Partial include
             value![relationName]!.push(
               ...selectFromEntry(
                 [relationFoundItems[i]],
-                typeof relationValue === 'boolean' && relationValue === true
+                typeof relationValue === "boolean" && relationValue === true
                   ? {}
                   : relationValue,
               ).map((i) => i.value),

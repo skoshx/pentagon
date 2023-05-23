@@ -33,7 +33,7 @@ export interface PentagonMethods<T extends TableDefinition> {
 export type PentagonResult<T extends Record<string, TableDefinition>> = {
   [K in keyof T]: PentagonMethods<T[K]>;
 };
- /*  & {
+/*  & {
   // Built-in functions
   close: () => Promise<void>;
   getKv: () => Deno.Kv;
