@@ -85,18 +85,24 @@ export function keysToIndexes(
   return keys;
 }
 
-export async function whereToKeys<T extends TableDefinition>(
+export async function whereToKeys<
+  T extends TableDefinition,
+  IndexKeys extends readonly unknown[],
+>(
   kv: Deno.Kv,
   tableName: string,
-  indexKeys: Deno.KvKey[],
+  indexKeys: readonly [...{ [K in keyof IndexKeys]: Deno.KvKey }],
   where: QueryArgs<T>["where"],
 ) {
   const schemaItems = indexKeys.length > 0
     ? await newRead(kv, indexKeys)
     : await listTable(kv, tableName);
+
   // Sort using `where`
-  // @ts-ignore
-  return findItemsBySearch(schemaItems, where);
+
+  // the cast to Deno.KvEntry here is unsafe
+  // consider what happens when newRead does not return a match
+  return findItemsBySearch(schemaItems as Deno.KvEntry<unknown>[], where);
 }
 
 export function selectFromEntry<T, Items = Partial<{ [K in keyof T]: true }>>(

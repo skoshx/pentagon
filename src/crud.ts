@@ -12,6 +12,7 @@ import {
   KvOptions,
   QueryArgs,
   TableDefinition,
+  WithMaybeVersionstamp,
   WithVersionstamp,
 } from "./types.ts";
 
@@ -32,7 +33,7 @@ function chainDelete<T>(op: Deno.AtomicOperation, key: Deno.KvKey) {
 }
 
 export async function listTable<T>(kv: Deno.Kv, tableName: string) {
-  const items: Deno.KvEntry<T>[] = [];
+  const items = new Array<Deno.KvEntry<T>>();
   for await (const item of kv.list<T>({ prefix: [tableName] })) {
     items.push(item);
   }
@@ -41,10 +42,9 @@ export async function listTable<T>(kv: Deno.Kv, tableName: string) {
 
 export async function newRead<T extends readonly unknown[]>(
   kv: Deno.Kv,
-  keys: Deno.KvKey[],
+  keys: readonly [...{ [K in keyof T]: Deno.KvKey }],
   kvOptions?: KvOptions,
 ) {
-  // @ts-ignore
   const res = await kv.getMany<T>(keys, kvOptions);
   return res;
 }
@@ -52,7 +52,7 @@ export async function newRead<T extends readonly unknown[]>(
 export async function read<T extends Record<string, DatabaseValue>>(
   kv: Deno.Kv,
   keys: Deno.KvKey[],
-): Promise<WithVersionstamp<T> | undefined> {
+): Promise<WithMaybeVersionstamp<T> | undefined> {
   for (let i = 0; i < keys.length; i++) {
     const res = await kv.get<T>(keys[i]);
     if (res.value) {
@@ -91,7 +91,7 @@ export async function remove(
 export async function update<T extends Record<string, DatabaseValue>>(
   kv: Deno.Kv,
   tableName: string,
-  item: T | WithVersionstamp<T>,
+  item: T,
   keys: Deno.KvKey[],
 ): Promise<WithVersionstamp<T>> {
   let res = kv.atomic();
@@ -182,11 +182,11 @@ export async function findMany<T extends TableDefinition>(
       }
 
       const relationSchema = getRelationSchema(relationDefinition);
-      // @ts-ignore
       const keys = schemaToKeys(
         relationSchema,
-        // @ts-ignore
-        relationValue === true ? {} : relationValue,
+        typeof relationValue === "boolean" && relationValue === true
+          ? {}
+          : relationValue as any,
       );
       const indexKeys = keysToIndexes(relationDefinition[0], keys);
 
@@ -199,25 +199,37 @@ export async function findMany<T extends TableDefinition>(
 
       for (let i = 0; i < foundItems.length; i++) {
         if (isToManyRelation(relationDefinition)) {
-          // @ts-ignore
-          if (!foundItems[i].value[relationName]) {
-            // @ts-ignore
-            foundItems[i].value[relationName] = [];
+          const entry = foundItems[i];
+          let value: Partial<Record<typeof relationName, unknown[]>>;
+          if (
+            typeof entry.value !== "object" ||
+            entry.value === null ||
+            relationName in entry.value === false ||
+            Array.isArray(
+                (entry.value as Record<typeof relationName, unknown>)[
+                  relationName
+                ],
+              ) === false
+          ) {
+            value = entry.value ??= {};
+            value[relationName] = [];
           }
+
+          // ensured that entry.value is of this type above
+          value ??= entry.value as Record<typeof relationName, unknown[]>;
 
           if (typeof relationValue === "object") {
             // Partial include
-            // @ts-ignore:
-            foundItems[i].value[relationName].push(
+            value![relationName]!.push(
               ...selectFromEntry(
                 [relationFoundItems[i]],
-                // @ts-ignore
-                relationValue === true ? {} : relationValue,
+                typeof relationValue === "boolean" && relationValue === true
+                  ? {}
+                  : relationValue,
               ).map((i) => i.value),
             );
           } else {
-            // @ts-ignore
-            foundItems[i].value[relationName].push(
+            value[relationName]!.push(
               relationFoundItems[i].value,
             );
           }

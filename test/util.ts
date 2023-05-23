@@ -1,6 +1,5 @@
 import { z } from "../deps.ts";
 import { createPentagon } from "../src/pentagon.ts";
-import { CreatedOrUpdatedItem } from "../src/types.ts";
 
 export const User = z.object({
   id: z.string().uuid().describe("primary, unique"),
@@ -24,9 +23,9 @@ export function removeVersionstamps<T = unknown>(items: Deno.KvEntry<T>[]) {
 
 export function removeVersionstamp<T extends { versionstamp: string | null }>(
   item: T,
-): T {
+): Omit<T, "versionstamp"> {
   const { versionstamp: _versionstamp, ...rest } = item;
-  return rest as T;
+  return rest;
 }
 
 export const kv = await Deno.openKv();

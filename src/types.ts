@@ -1,36 +1,39 @@
 import { z } from "../deps.ts";
 import { KeyPropertySchema } from "./keys.ts";
 
+export interface PentagonMethods<T extends TableDefinition> {
+  findFirst: (args: QueryArgs<T>) => Promise<QueryResponse<T, typeof args>>;
+  // findFirstOrThrow: (
+  //   args: QueryArgs<T>,
+  // ) => QueryResponse<T, typeof args>;
+  findMany: (
+    args: QueryArgs<T>,
+  ) => Promise<Array<QueryResponse<T, typeof args>>>;
+  // findUnique: (args: QueryArgs<T>) => QueryResponse<T, typeof args>;
+  // findUniqueOrThrow: (
+  //   args: QueryArgs<T>,
+  // ) => QueryResponse<T, typeof args>;
+  create: (args: CreateAndUpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
+  // createMany: (
+  //   args: CreateAndUpdateArgs<T>,
+  // ) => Array<CreateAndUpdateResponse<T>>;
+  update: (args: CreateAndUpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
+  // updateMany: (
+  //   args: CreateAndUpdateArgs<T>,
+  // ) => Array<CreateAndUpdateResponse<T>>;
+  // upsert: (args: CreateAndUpdateArgs<T>) => CreateAndUpdateResponse<T>;
+  // count: (args: QueryArgs<T>) => number;
+  delete: (args: QueryArgs<T>) => Promise<QueryResponse<T, typeof args>>;
+  deleteMany: (
+    args: QueryArgs<T>,
+  ) => Promise<QueryResponse<T, typeof args>>;
+  // aggregate: (args: QueryArgs<T>) => QueryResponse<T, typeof args>;
+}
+
 export type PentagonResult<T extends Record<string, TableDefinition>> = {
-  [K in keyof T]: {
-    findFirst: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
-    findFirstOrThrow: (
-      args: QueryArgs<T[K]>,
-    ) => QueryResponse<T[K], typeof args>;
-    findMany: (
-      args: QueryArgs<T[K]>,
-    ) => Array<QueryResponse<T[K], typeof args>>;
-    findUnique: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
-    findUniqueOrThrow: (
-      args: QueryArgs<T[K]>,
-    ) => QueryResponse<T[K], typeof args>;
-    create: (args: CreateAndUpdateArgs<T[K]>) => CreateAndUpdateResponse<T[K]>;
-    createMany: (
-      args: CreateAndUpdateArgs<T[K]>,
-    ) => Array<CreateAndUpdateResponse<T[K]>>;
-    update: (args: CreateAndUpdateArgs<T[K]>) => CreateAndUpdateResponse<T[K]>;
-    updateMany: (
-      args: CreateAndUpdateArgs<T[K]>,
-    ) => Array<CreateAndUpdateResponse<T[K]>>;
-    upsert: (args: CreateAndUpdateArgs<T[K]>) => CreateAndUpdateResponse<T[K]>;
-    count: (args: QueryArgs<T[K]>) => number;
-    delete: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
-    deleteMany: (
-      args: QueryArgs<T[K]>,
-    ) => Array<QueryResponse<T[K], typeof args>>;
-    aggregate: (args: QueryArgs<T[K]>) => QueryResponse<T[K], typeof args>;
-  };
-}; /*  & {
+  [K in keyof T]: PentagonMethods<T[K]>;
+};
+/*  & {
   // Built-in functions
   close: () => Promise<void>;
   getKv: () => Deno.Kv;
@@ -38,10 +41,10 @@ export type PentagonResult<T extends Record<string, TableDefinition>> = {
 
 // @todo rename to something like WithVersionstamp
 export type WithVersionstamp<T> = T & {
-  versionstamp: string | null;
-};
-export type CreatedOrUpdatedItem<T> = T & {
   versionstamp: string;
+};
+export type WithMaybeVersionstamp<T> = T & {
+  versionstamp: string | null;
 };
 
 export type LocalKey = string;
@@ -86,7 +89,7 @@ export type QueryResponse<
 
 export type DeleteResponse = { versionstamp: string };
 export type CreateAndUpdateResponse<T extends TableDefinition> =
-  CreatedOrUpdatedItem<
+  WithVersionstamp<
     z.output<
       T["schema"]
     >
@@ -136,8 +139,8 @@ export type DatabaseValue<T = unknown> =
   | bigint
   | Uint8Array
   | Array<T>
-  | Object
-  | Map<any, any>
+  | Record<string | number | symbol, T>
+  | Map<unknown, unknown>
   | Set<T>
   | Date
   | RegExp;
