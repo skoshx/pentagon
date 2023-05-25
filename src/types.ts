@@ -13,11 +13,11 @@ export interface PentagonMethods<T extends TableDefinition> {
   // findUniqueOrThrow: (
   //   args: QueryArgs<T>,
   // ) => QueryResponse<T, typeof args>;
-  create: (args: CreateAndUpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
+  create: (args: CreateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
   // createMany: (
   //   args: CreateAndUpdateArgs<T>,
   // ) => Array<CreateAndUpdateResponse<T>>;
-  update: (args: CreateAndUpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
+  update: (args: UpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
   // updateMany: (
   //   args: CreateAndUpdateArgs<T>,
   // ) => Array<CreateAndUpdateResponse<T>>;
@@ -95,7 +95,12 @@ export type CreateAndUpdateResponse<T extends TableDefinition> =
     >
   >;
 
-export type CreateAndUpdateArgs<T extends TableDefinition> = QueryArgs<T> & {
+export type CreateArgs<T extends TableDefinition> =
+  & Pick<QueryArgs<T>, "select">
+  & {
+    data: z.input<T["schema"]>;
+  };
+export type UpdateArgs<T extends TableDefinition> = QueryArgs<T> & {
   data: Partial<z.input<T["schema"]>>;
 };
 
