@@ -15,3 +15,9 @@ export class PentagonKeyError extends Error {
     super(message, { cause });
   }
 }
+
+export class PentagonUpdateError extends Error {
+  constructor(message: string, cause?: string) {
+    super(message, { cause });
+  }
+}

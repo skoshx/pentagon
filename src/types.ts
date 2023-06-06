@@ -14,13 +14,13 @@ export interface PentagonMethods<T extends TableDefinition> {
   //   args: QueryArgs<T>,
   // ) => QueryResponse<T, typeof args>;
   create: (args: CreateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
-  // createMany: (
-  //   args: CreateAndUpdateArgs<T>,
-  // ) => Array<CreateAndUpdateResponse<T>>;
+  createMany: (
+    args: CreateManyArgs<T>,
+  ) => Promise<CreateAndUpdateResponse<T>[]>;
   update: (args: UpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
-  // updateMany: (
-  //   args: CreateAndUpdateArgs<T>,
-  // ) => Array<CreateAndUpdateResponse<T>>;
+  updateMany: (
+    args: UpdateArgs<T>,
+  ) => Promise<Array<CreateAndUpdateResponse<T>>>;
   // upsert: (args: CreateAndUpdateArgs<T>) => CreateAndUpdateResponse<T>;
   // count: (args: QueryArgs<T>) => number;
   delete: (args: QueryArgs<T>) => Promise<QueryResponse<T, typeof args>>;
@@ -44,7 +44,7 @@ export type WithVersionstamp<T> = T & {
   versionstamp: string;
 };
 export type WithMaybeVersionstamp<T> = T & {
-  versionstamp: string | null;
+  versionstamp: string | null | undefined;
 };
 
 export type LocalKey = string;
@@ -55,7 +55,6 @@ export type ForeignKey = string;
  */
 export type RelationDefinition = [
   relationSchemaName: string,
-  // relationSchema: ReturnType<typeof z.object>,
   /**
    * If you provide this as an array, the relation is treated as a
    * to-many relation, if it's not an array, then its treated as a
@@ -74,10 +73,6 @@ export type TableDefinition = {
   schema: ReturnType<typeof z.object>;
   relations?: Record<string, RelationDefinition>;
 };
-
-/* export type QueryResponse<T extends TableDefinition> = CreatedOrUpdatedItem<
-  z.output<T["schema"]>
->; */
 
 export type QueryResponse<
   T extends TableDefinition,
@@ -100,14 +95,19 @@ export type CreateArgs<T extends TableDefinition> =
   & {
     data: z.input<T["schema"]>;
   };
+export type CreateManyArgs<T extends TableDefinition> =
+  & Pick<QueryArgs<T>, "select">
+  & {
+    data: z.input<T["schema"]>[];
+  };
 export type UpdateArgs<T extends TableDefinition> = QueryArgs<T> & {
-  data: Partial<z.input<T["schema"]>>;
+  data: Partial<WithMaybeVersionstamp<z.input<T["schema"]>>>;
 };
 
-export type KvOptions = Parameters<Deno.Kv["get"]>[1];
+export type QueryKvOptions = Parameters<Deno.Kv["get"]>[1];
 
 export type QueryArgs<T extends TableDefinition> = {
-  where?: Partial<z.infer<T["schema"]> & WithVersionstamp<T>>;
+  where?: Partial<WithMaybeVersionstamp<z.infer<T["schema"]>>>;
   take?: number;
   skip?: number;
   select?: Partial<z.infer<T["schema"]>>;
@@ -123,7 +123,7 @@ export type QueryArgs<T extends TableDefinition> = {
       >;
   };
   distinct?: Array<keyof z.infer<T["schema"]>>;
-  kvOptions?: KvOptions;
+  kvOptions?: QueryKvOptions;
 };
 
 export type AccessKey = {

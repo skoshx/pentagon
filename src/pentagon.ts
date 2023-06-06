@@ -1,8 +1,8 @@
-import { z } from "../deps.ts";
-import { create, findMany, listTable, read, remove, update } from "./crud.ts";
-import { keysToIndexes, schemaToKeys } from "./keys.ts";
-import { findItemsBySearch } from "./search.ts";
+import { create, findMany, remove, update } from "./crud.ts";
+import { PentagonUpdateError } from "./errors.ts";
+import { keysToIndexes, schemaToKeys, whereToKeys } from "./keys.ts";
 import type {
+  CreateAndUpdateResponse,
   PentagonMethods,
   PentagonResult,
   TableDefinition,
@@ -18,14 +18,18 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
   const result = Object.fromEntries(
     Object.entries(schema).map(([tableName, tableDefinition]) => {
       const methods: PentagonMethods<typeof tableDefinition> = {
-        create: (createOrUpdateArgs) =>
-          createImpl(kv, tableName, tableDefinition, createOrUpdateArgs),
+        create: (createArgs) =>
+          createImpl(kv, tableName, tableDefinition, createArgs),
+        createMany: (createManyArgs) =>
+          createManyImpl(kv, tableName, tableDefinition, createManyArgs),
         delete: (queryArgs) =>
           deleteImpl(kv, tableName, tableDefinition, queryArgs),
         deleteMany: (queryArgs) =>
           deleteManyImpl(kv, tableName, tableDefinition, queryArgs),
         update: (queryArgs) =>
           updateImpl(kv, tableName, tableDefinition, queryArgs),
+        updateMany: (queryArgs) =>
+          updateManyImpl(kv, tableName, tableDefinition, queryArgs),
         findMany: (queryArgs) =>
           findManyImpl(kv, tableName, tableDefinition, queryArgs),
         findFirst: (queryArgs) =>
@@ -35,24 +39,50 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
       return [tableName, methods];
     }),
   );
+  // @ts-ignore: todo: add this without losing the inferred types
+  result.getKv = () => kv;
 
   return result as PentagonResult<T>;
+}
+
+export function getKvInstance<T>(db: T): Deno.Kv {
+  // @ts-ignore: same as above
+  return db.getKv();
 }
 
 async function createImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: T,
-  createOrUpdateArgs: Parameters<PentagonMethods<T>["create"]>[0],
+  createArgs: Parameters<PentagonMethods<T>["create"]>[0],
 ): ReturnType<PentagonMethods<T>["create"]> {
-  const keys = schemaToKeys(tableDefinition.schema, createOrUpdateArgs.data);
+  const keys = schemaToKeys(tableDefinition.schema, createArgs.data);
   const indexKeys = keysToIndexes(tableName, keys);
 
-  return await create(kv, tableName, createOrUpdateArgs.data, indexKeys);
+  return await create(kv, createArgs.data, indexKeys);
 }
 
-// @todo(skoshx): refactor these using `whereToKeys` function
-// like we refactored `findMany` and `findFirst`
+async function createManyImpl<T extends TableDefinition>(
+  kv: Deno.Kv,
+  tableName: string,
+  tableDefinition: T,
+  createManyArgs: Parameters<PentagonMethods<T>["createMany"]>[0],
+) {
+  // TODO: this should be in one "atomic" operation, this is not good
+  const createdItems: CreateAndUpdateResponse<T>[] = [];
+  for (let i = 0; i < createManyArgs.data.length; i++) {
+    const createArgs: Parameters<PentagonMethods<T>["create"]>[0] = {
+      select: createManyArgs.select,
+      data: createManyArgs.data[i],
+    };
+
+    createdItems.push(
+      await createImpl(kv, tableName, tableDefinition, createArgs),
+    );
+  }
+  return createdItems;
+}
+
 async function deleteImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
@@ -61,12 +91,16 @@ async function deleteImpl<T extends TableDefinition>(
 ): ReturnType<PentagonMethods<T>["delete"]> {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
+  const foundItems = await whereToKeys(
+    kv,
+    tableName,
+    indexKeys,
+    queryArgs.where ?? {},
+  );
 
-  return await remove(kv, indexKeys);
+  return await remove(kv, foundItems.map((i) => i.key));
 }
 
-// @todo(skoshx): refactor these using `whereToKeys` function
-// like we refactored `findMany` and `findFirst`
 async function deleteManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
@@ -75,51 +109,62 @@ async function deleteManyImpl<T extends TableDefinition>(
 ): ReturnType<PentagonMethods<T>["deleteMany"]> {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
+  const foundItems = await whereToKeys(
+    kv,
+    tableName,
+    indexKeys,
+    queryArgs.where ?? {},
+  );
 
-  return await remove(kv, indexKeys);
+  return await remove(kv, foundItems.map((i) => i.key));
 }
 
-// @todo(skoshx): refactor these using `whereToKeys` function
-// like we refactored `findMany` and `findFirst`
+async function updateManyImpl<T extends TableDefinition>(
+  kv: Deno.Kv,
+  tableName: string,
+  tableDefinition: TableDefinition,
+  updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
+): ReturnType<PentagonMethods<T>["updateMany"]> {
+  const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
+  const indexKeys = keysToIndexes(tableName, keys);
+  const foundItems = await whereToKeys(
+    kv,
+    tableName,
+    indexKeys,
+    updateArgs.where ?? {},
+  );
+
+  if (foundItems.length === 0) {
+    // @todo: should we throw?
+    throw new PentagonUpdateError(`Updating zero elements.`);
+  }
+
+  // Merge
+  const updatedItems = foundItems.map((existingItem) => ({
+    key: existingItem.key,
+    value: {
+      ...existingItem.value,
+      ...updateArgs.data,
+    },
+    versionstamp: updateArgs.data.versionstamp ?? existingItem.versionstamp,
+  }));
+
+  // @ts-ignore
+  return await update(
+    kv,
+    updatedItems.map((i) => i.value),
+    foundItems.map((i) => i.key),
+  );
+}
+
 async function updateImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: TableDefinition,
   updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
 ): ReturnType<PentagonMethods<T>["update"]> {
-  const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
-  const indexKeys = keysToIndexes(tableName, keys);
-
-  if (indexKeys.length === 0) {
-    const schemaItems = await listTable<
-      z.infer<T["schema"]>
-    >(kv, tableName);
-    const foundItems = findItemsBySearch(
-      schemaItems,
-      updateArgs.where ?? {},
-    );
-    if (foundItems.length === 0) throw new Error();
-    const updatedData = {
-      ...foundItems[0].value,
-      ...updateArgs.data,
-    };
-
-    return await update(
-      kv,
-      tableName,
-      updatedData,
-      foundItems.map((item) => item.key),
-    );
-  }
-
-  const readOne = await read(kv, indexKeys);
-
-  const updatedData = {
-    ...readOne,
-    ...updateArgs.data,
-  };
-
-  return await update(kv, tableName, updatedData, indexKeys);
+  return (await updateManyImpl(kv, tableName, tableDefinition, updateArgs))
+    ?.[0];
 }
 
 async function findManyImpl<T extends TableDefinition>(

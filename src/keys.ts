@@ -1,5 +1,6 @@
 import { z } from "../deps.ts";
-import { listTable, newRead, read } from "./crud.ts";
+import { removeVersionstamp } from "../test/util.ts";
+import { listTable, read } from "./crud.ts";
 import { PentagonKeyError } from "./errors.ts";
 import { findItemsBySearch } from "./search.ts";
 import { AccessKey, KeyProperty, QueryArgs, TableDefinition } from "./types.ts";
@@ -95,14 +96,17 @@ export async function whereToKeys<
   where: QueryArgs<T>["where"],
 ) {
   const schemaItems = indexKeys.length > 0
-    ? await newRead(kv, indexKeys)
+    ? await read(kv, indexKeys)
     : await listTable(kv, tableName);
 
   // Sort using `where`
 
   // the cast to Deno.KvEntry here is unsafe
-  // consider what happens when newRead does not return a match
-  return findItemsBySearch(schemaItems as Deno.KvEntry<unknown>[], where);
+  // consider what happens when read does not return a match
+  return findItemsBySearch(
+    schemaItems as Deno.KvEntry<z.output<T["schema"]>>[],
+    where && removeVersionstamp(where),
+  );
 }
 
 export function selectFromEntry<T, Items = Partial<{ [K in keyof T]: true }>>(

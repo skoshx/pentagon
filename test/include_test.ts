@@ -18,7 +18,7 @@ Deno.test("include", async (t) => {
       },
     });
 
-    assertEquals(userWithOrders, {
+    assertEquals(removeVersionstamp(userWithOrders), {
       createdAt: new Date(0),
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "John Doe",

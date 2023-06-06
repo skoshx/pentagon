@@ -61,13 +61,39 @@ const user = await db.users.findFirst({
 const userWithOrders = await db.users.findFirst({
   where: { name: "John Doe" },
   include: {
-    myOrders: true, // if we want the whole object
-    /* myOrders: { 👈 if we want just some parts to be included
-			id: true,
-			name: true
-		} */
+    myOrders: true, // 👈 if we want the whole object
+    /* myOrders: { name: true }, 👈 if we want just some parts to be included */
   },
 });
+```
+
+## Relations
+
+Defining relations works by defining the `relations` key in the table
+definition. This allows us to `include` the values of relations, the same way as
+we are familiar with from Prisma.
+
+The type signature
+[RelationDefinition](https://github.com/skoshx/pentagon/blob/fae437d373df89a1610a998e940c92213d3134b3/src/types.ts#LL56C24-L56C24)
+explains what each of the array values represent.
+
+Basically, we have `[relation name, schema, local key, foreign key]`.
+
+For instance, a many-to-one relation could look like this:
+
+```typescript
+users: {
+  schema: User,
+  relations: {
+    myOrders: ["orders", [Order], undefined, "userId"],
+  },
+},
+orders: {
+  schema: Order,
+  relations: {
+    user: ["users", User, "userId", "id"],
+  },
+},
 ```
 
 ## 💻 Development

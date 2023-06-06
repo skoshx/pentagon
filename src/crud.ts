@@ -9,12 +9,12 @@ import {
 import { getRelationSchema, isToManyRelation } from "./relation.ts";
 import {
   DatabaseValue,
-  KvOptions,
   QueryArgs,
+  QueryKvOptions,
   TableDefinition,
-  WithMaybeVersionstamp,
   WithVersionstamp,
 } from "./types.ts";
+import { mergeValueAndVersionstamp } from "./util.ts";
 
 function chainAccessKeyCheck(
   op: Deno.AtomicOperation,
@@ -40,28 +40,13 @@ export async function listTable<T>(kv: Deno.Kv, tableName: string) {
   return items;
 }
 
-export async function newRead<T extends readonly unknown[]>(
+export async function read<T extends readonly unknown[]>(
   kv: Deno.Kv,
   keys: readonly [...{ [K in keyof T]: Deno.KvKey }],
-  kvOptions?: KvOptions,
+  kvOptions?: QueryKvOptions,
 ) {
   const res = await kv.getMany<T>(keys, kvOptions);
   return res;
-}
-
-export async function read<T extends Record<string, DatabaseValue>>(
-  kv: Deno.Kv,
-  keys: Deno.KvKey[],
-): Promise<WithMaybeVersionstamp<T> | undefined> {
-  for (let i = 0; i < keys.length; i++) {
-    const res = await kv.get<T>(keys[i]);
-    if (res.value) {
-      return {
-        ...res.value,
-        versionstamp: res.versionstamp,
-      };
-    }
-  }
 }
 
 export async function remove(
@@ -70,9 +55,10 @@ export async function remove(
 ): Promise<WithVersionstamp<Record<string, DatabaseValue>>> {
   let res = kv.atomic();
 
-  for (let i = 0; i < keys.length; i++) {
+  // @todo: do we need these checks here for delete ops?
+  /* for (let i = 0; i < keys.length; i++) {
     res = chainAccessKeyCheck(res, keys[i], null);
-  }
+  } */
 
   for (let i = 0; i < keys.length; i++) {
     res = chainDelete(res, keys[i]);
@@ -90,40 +76,40 @@ export async function remove(
 
 export async function update<T extends Record<string, DatabaseValue>>(
   kv: Deno.Kv,
-  tableName: string,
-  item: T,
+  items: T[],
   keys: Deno.KvKey[],
-): Promise<WithVersionstamp<T>> {
+): Promise<WithVersionstamp<T>[]> {
   let res = kv.atomic();
 
-  // Checks
-  for (let i = 0; i < keys.length; i++) {
-    res = chainAccessKeyCheck(
-      res,
-      keys[i],
-      (item.versionstamp as string) ?? null,
-    );
-  }
-
-  // Sets
-  for (let i = 0; i < keys.length; i++) {
-    res = chainSet(res, keys[i], item);
+  // Iterate through items
+  for (let i = 0; i < items.length; i++) {
+    // Checks (through keys)
+    for (let j = 0; j < keys.length; j++) {
+      res = chainAccessKeyCheck(
+        res,
+        keys[j],
+        (items[j].versionstamp as string) ?? null,
+      );
+    }
+    // Sets (through keys)
+    for (let j = 0; j < keys.length; j++) {
+      res = chainSet(res, keys[j], items[i]);
+    }
   }
 
   const commitResult = await res.commit();
 
   if (commitResult.ok) {
-    return {
-      ...item,
+    return items.map((i) => ({
+      ...i,
       versionstamp: commitResult.versionstamp,
-    };
+    }));
   }
   throw new PentagonCreateItemError(`Could not update item.`);
 }
 
 export async function create<T extends Record<string, DatabaseValue>>(
   kv: Deno.Kv,
-  tableName: string,
   item: T,
   keys: Deno.KvKey[],
 ): Promise<WithVersionstamp<T>> {
@@ -150,8 +136,6 @@ export async function create<T extends Record<string, DatabaseValue>>(
   throw new PentagonCreateItemError(`Could not create item.`);
 }
 
-// findMany, deleteMany, updateMany, etc
-
 export async function findMany<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
@@ -167,8 +151,7 @@ export async function findMany<T extends TableDefinition>(
     queryArgs.where ?? {},
   );
 
-  // Include
-
+  // Include @todo: clean this up
   if (queryArgs.include) {
     for (
       const [relationName, relationValue] of Object.entries(queryArgs.include)
@@ -246,5 +229,5 @@ export async function findMany<T extends TableDefinition>(
     ? selectFromEntry(foundItems, queryArgs.select)
     : foundItems;
 
-  return selectedItems.map((item) => item.value);
+  return selectedItems.map((item) => mergeValueAndVersionstamp(item));
 }

@@ -1,4 +1,8 @@
-import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
+import {
+  assert,
+  assertEquals,
+  assertExists,
+} from "https://deno.land/std@0.186.0/testing/asserts.ts";
 import {
   clearMocks,
   createMockDatabase,
@@ -7,116 +11,139 @@ import {
   User,
 } from "./util.ts";
 import { z } from "../deps.ts";
+import { getKvInstance } from "../mod.ts";
 
 Deno.test("Create / Read / Update / Remove", async (t) => {
   const db = await createMockDatabase();
   await clearMocks(db);
   await populateMockDatabase(db);
 
-  const mockUser: z.infer<typeof User> = {
-    id: "9fa09a9e-d399-40a0-855e-79c0738e1079",
-    createdAt: new Date(0),
-    name: "Eric Example",
-  };
+  const mockUsers: z.infer<typeof User>[] = [...new Array(5).keys()].map((
+    i,
+  ) => ({
+    id: crypto.randomUUID(),
+    createdAt: new Date(1337),
+    name: `User ${i}`,
+  }));
 
   await t.step("create", async () => {
     const createdUser = await db.users.create({
-      data: mockUser,
+      data: mockUsers[0],
     });
 
-    assertEquals(removeVersionstamp(createdUser), mockUser);
+    const fetchedUser = await db.users.findFirst({
+      where: { id: mockUsers[0].id },
+    });
+
+    assertEquals(removeVersionstamp(fetchedUser), mockUsers[0]);
+    assertEquals(removeVersionstamp(createdUser), mockUsers[0]);
   });
-  /* TODO: await t.step('createMany', async () => {
-		const createdUsers = await db.users.createMany({
-			data: mockUser
-		})
-	})*/
+
+  await t.step("delete", async () => {
+    await db.users.delete({
+      where: { id: mockUsers[0].id },
+    });
+
+    const nonexistentUser = await db.users.findFirst({
+      where: { id: mockUsers[0].id },
+    });
+
+    for await (const res of getKvInstance(db).list({ prefix: ["users"] })) {
+      assert((res.value as z.infer<typeof User>).id !== mockUsers[0].id);
+    }
+    assertEquals(nonexistentUser, undefined);
+  });
+
+  await t.step("createMany", async () => {
+    const createdUsers = await db.users.createMany({
+      data: mockUsers,
+    });
+
+    const fetchedUsers = await db.users.findMany({});
+
+    assert(
+      mockUsers.every((u) =>
+        fetchedUsers.find((fetchedUser) => fetchedUser.id === u.id)
+      ),
+      `Mock users don't exist in the list of users fetched from the database.`,
+    );
+    assertEquals(
+      createdUsers.map((createdUser) => removeVersionstamp(createdUser)),
+      mockUsers,
+    );
+  });
 
   await t.step("read", async () => {
     const user = await db.users.findFirst({
-      where: { id: mockUser.id },
+      where: { id: mockUsers[0].id },
     });
 
     const userByNonIndexedKey = await db.users.findFirst({
-      where: { name: mockUser.name },
+      where: { name: mockUsers[0].name },
     });
     const twoIndexes = await db.users.findFirst({
-      where: { name: mockUser.name, id: mockUser.id },
+      where: { name: mockUsers[0].name, id: mockUsers[0].id },
     });
 
-    assertEquals(removeVersionstamp(twoIndexes), mockUser);
-    assertEquals(removeVersionstamp(user), mockUser);
-    assertEquals(removeVersionstamp(userByNonIndexedKey), mockUser);
+    assertEquals(removeVersionstamp(twoIndexes), mockUsers[0]);
+    assertEquals(removeVersionstamp(user), mockUsers[0]);
+    assertEquals(removeVersionstamp(userByNonIndexedKey), mockUsers[0]);
+  });
+
+  await t.step("deleteMany", async () => {
+    await db.users.deleteMany({
+      where: { createdAt: new Date(1337) },
+    });
+
+    for await (const res of getKvInstance(db).list({ prefix: ["users"] })) {
+      assertEquals(
+        (res.value as z.infer<typeof User>).id,
+        "67218087-d9a8-4a57-b058-adc01f179ff9",
+      );
+    }
   });
 
   await t.step("update", async () => {
     const fetchedUser = await db.users.findFirst({
-      where: { id: mockUser.id },
+      where: { id: "67218087-d9a8-4a57-b058-adc01f179ff9" },
+    });
+    assertExists(fetchedUser);
+
+    // With `versionstamp`
+    const updatedUser = await db.users.update({
+      where: {
+        id: "67218087-d9a8-4a57-b058-adc01f179ff9",
+        versionstamp: fetchedUser.versionstamp,
+      },
+      data: {
+        name: "Mock User Updated",
+        versionstamp: fetchedUser.versionstamp,
+      },
     });
 
-    // Without `versionstamp`
-    const updatedUser = await db.users.update({
-      where: { id: mockUser.id, versionstamp: fetchedUser.versionstamp },
-      data: { name: "Mock User Updated" },
-    });
+    // @todo: without versionstamp?
 
     const fetchedUpdatedUser = await db.users.findFirst({
-      where: { id: mockUser.id },
+      where: { id: "67218087-d9a8-4a57-b058-adc01f179ff9" },
     });
 
     // Illegal update throws
     /* assertThrows(async () => await db.users.update({
-			where: { id: mockUser.id },
+			where: { id: mockUsers[0].id },
 			data: { lastName: 'Hello World' }
 		})) */
 
     assertEquals(removeVersionstamp(updatedUser), {
-      ...mockUser,
+      createdAt: new Date(0),
+      id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "Mock User Updated",
     });
     assertEquals(removeVersionstamp(fetchedUpdatedUser), {
-      ...mockUser,
+      createdAt: new Date(0),
+      id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "Mock User Updated",
     });
   });
 
-  /* await t.step("update", async () => {
-    const updatedUser = await db.users.update({
-      where: { id: mockUser.id },
-      data: { name: "Mock User Updated" },
-    });
-
-    const fetchedUpdatedUser = await db.users.findFirst({
-      where: { id: mockUser.id },
-    });
-
-    assertEquals(removeVersionstamp(updatedUser), {
-      ...mockUser,
-			// ves
-      name: "Mock User Updated",
-    });
-    assertEquals(removeVersionstamp(fetchedUpdatedUser), {
-      ...mockUser,
-      name: "Mock User Updated",
-    });
-  });
-
-  await t.step("remove", async () => {
-    const deletedUser = await db.users.delete({
-      where: { id: mockUser.id },
-    });
-    assertEquals(removeVersionstamp(deletedUser), {
-      ...mockUser,
-      name: "Mock User Updated",
-    });
-
-    const nonexistentUser = await db.users.findFirst({
-      where: { id: mockUser.id },
-    });
-
-    assertEquals(nonexistentUser, null);
-  }); */
-
-  // db.close
   await clearMocks(db);
 });

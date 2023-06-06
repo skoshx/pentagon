@@ -9,7 +9,7 @@ export function getRelationSchema(
   relationDefinition: RelationDefinition,
 ): ReturnType<typeof z.object> {
   return isToManyRelation(relationDefinition)
-    // @ts-ignore: bad at types
+    // @ts-ignore
     ? relationDefinition[1][0] as ReturnType<typeof z.object>
     : relationDefinition[1] as ReturnType<typeof z.object>;
 }
@@ -24,6 +24,8 @@ export type RelationDefinition = [
 ];
 
 */
+
+// @todo(skoshx): validate relation target etc…
 
 export function isValidRelationDefinition(
   relationDefinition: RelationDefinition,
