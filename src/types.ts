@@ -104,20 +104,24 @@ export type QueryResponse<
   z.output<T["schema"]> & Include<T["relations"], PassedInArgs["include"]>
 >;
 
+type Nothing = {};
+
 type Include<
   Relations extends TableDefinition["relations"],
   ToBeIncluded extends IncludeDetails<Relations> | undefined,
-> = Relations extends Record<string, RelationDefinition> ? {
-    [Rel in keyof Relations]: ToBeIncluded extends
-      Record<Rel, infer DetailsToInclude>
-      ? (Relations[Rel][1] extends [{ _output: infer OneToManyRelatedSchema }]
-        ? MatchAndSelect<OneToManyRelatedSchema, DetailsToInclude>[]
-        : Relations[Rel][1] extends { _output: infer OneToOneRelatedSchema }
-          ? MatchAndSelect<OneToOneRelatedSchema, DetailsToInclude>
-        : never)
-      : ToBeIncluded;
-  }
-  : never;
+> = Relations extends Record<string, RelationDefinition>
+  ? ToBeIncluded extends Record<string, unknown> ? {
+      [Rel in keyof Relations]: ToBeIncluded extends
+        Record<Rel, infer DetailsToInclude>
+        ? (Relations[Rel][1] extends [{ _output: infer OneToManyRelatedSchema }]
+          ? MatchAndSelect<OneToManyRelatedSchema, DetailsToInclude>[]
+          : Relations[Rel][1] extends { _output: infer OneToOneRelatedSchema }
+            ? MatchAndSelect<OneToOneRelatedSchema, DetailsToInclude>
+          : Nothing)
+        : Nothing;
+    }
+  : Nothing
+  : Nothing;
 
 type MatchAndSelect<SourceSchema, ToBeIncluded> = {
   [Key in Extract<keyof SourceSchema, keyof ToBeIncluded>]:
