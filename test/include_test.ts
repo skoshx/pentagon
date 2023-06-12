@@ -22,7 +22,6 @@ Deno.test("include", async (t) => {
       createdAt: new Date(0),
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "John Doe",
-      // @ts-expect-error
       myOrders: [{
         id: "aaa62b91-a021-41c3-a2ce-ef079859d59c",
         createdAt: new Date(0),
@@ -38,21 +37,24 @@ Deno.test("include", async (t) => {
       include: {
         myOrders: {
           name: true,
+          createdAt: {
+            userReadable: true
+          }
         },
       },
     });
 
-    // @todo: this shouldn't give TS errors
-    // @ts-expect-error
     const myOrders = userWithPartialOrders.myOrders;
 
     assertEquals(removeVersionstamp(userWithPartialOrders), {
       createdAt: new Date(0),
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "John Doe",
-      // @ts-expect-error
       myOrders: [{
         name: "Cheeseburger",
+        createdAt: {
+          userReadable: '1970'
+        }
       }],
     });
   });
