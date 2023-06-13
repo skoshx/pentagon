@@ -21,7 +21,7 @@
 ## 💻 Example usage
 
 ```typescript
-import { z } from "...";
+import { createPentagon, z } from "...";
 
 export const User = z.object({
   id: z.string().uuid().describe("primary, unique"),
@@ -35,6 +35,8 @@ export const Order = z.object({
   name: z.string(),
   userId: z.string().uuid(),
 });
+
+const kv = await Deno.openKv();
 
 const db = createPentagon(kv, {
   users: {
