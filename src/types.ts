@@ -111,13 +111,20 @@ type Include<
   ToBeIncluded extends IncludeDetails<Relations> | undefined,
 > = Relations extends Record<string, RelationDefinition>
   ? ToBeIncluded extends Record<string, unknown> ? {
-      [Rel in keyof Relations]: ToBeIncluded extends
-        Record<Rel, infer DetailsToInclude>
-        ? (Relations[Rel][1] extends [{ _output: infer OneToManyRelatedSchema }]
+      [Rel in keyof Relations]: Relations[Rel][1] extends
+        [{ _output: infer OneToManyRelatedSchema }]
+        ? ToBeIncluded extends
+          Record<Rel, infer DetailsToInclude extends Record<string, unknown>>
           ? MatchAndSelect<OneToManyRelatedSchema, DetailsToInclude>[]
-          : Relations[Rel][1] extends { _output: infer OneToOneRelatedSchema }
-            ? MatchAndSelect<OneToOneRelatedSchema, DetailsToInclude>
-          : Nothing)
+        : ToBeIncluded extends Record<Rel, true> ? OneToManyRelatedSchema[]
+        : Nothing
+        : Relations[Rel][1] extends { _output: infer OneToOneRelatedSchema }
+          ? ToBeIncluded extends
+            Record<Rel, infer DetailsToInclude extends Record<string, unknown>>
+            ? ToBeIncluded extends Record<Rel, true>
+              ? MatchAndSelect<OneToOneRelatedSchema, DetailsToInclude>
+            : Nothing
+          : OneToOneRelatedSchema
         : Nothing;
     }
   : Nothing
