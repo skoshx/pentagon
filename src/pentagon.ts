@@ -97,7 +97,7 @@ async function deleteImpl<T extends TableDefinition>(
     indexKeys,
     queryArgs.where ?? {},
   );
-
+  // @ts-ignore TODO: delete should not use QueryArgs or QueryResponse
   return await remove(kv, foundItems.map((i) => i.key));
 }
 
@@ -115,7 +115,7 @@ async function deleteManyImpl<T extends TableDefinition>(
     indexKeys,
     queryArgs.where ?? {},
   );
-
+  // @ts-ignore TODO: deleteMany should not use QueryArgs or QueryResponse
   return await remove(kv, foundItems.map((i) => i.key));
 }
 
@@ -149,7 +149,6 @@ async function updateManyImpl<T extends TableDefinition>(
     versionstamp: updateArgs.data.versionstamp ?? existingItem.versionstamp,
   }));
 
-  // @ts-ignore
   return await update(
     kv,
     updatedItems.map((i) => i.value),

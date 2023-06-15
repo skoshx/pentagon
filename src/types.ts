@@ -1,32 +1,55 @@
+/// <reference lib="deno.unstable" />
 import { z } from "../deps.ts";
 import { KeyPropertySchema } from "./keys.ts";
-
 export interface PentagonMethods<T extends TableDefinition> {
-  findFirst: (args: QueryArgs<T>) => Promise<QueryResponse<T, typeof args>>;
+  findFirst: <Args extends QueryArgs<T>>(
+    args: Args,
+  ) => Promise<QueryResponse<T, Args>>;
+
   // findFirstOrThrow: (
   //   args: QueryArgs<T>,
   // ) => QueryResponse<T, typeof args>;
-  findMany: (
-    args: QueryArgs<T>,
-  ) => Promise<Array<QueryResponse<T, typeof args>>>;
+
+  findMany: <Args extends QueryArgs<T>>(
+    args: Args,
+  ) => Promise<Array<QueryResponse<T, Args>>>;
+
   // findUnique: (args: QueryArgs<T>) => QueryResponse<T, typeof args>;
+
   // findUniqueOrThrow: (
   //   args: QueryArgs<T>,
   // ) => QueryResponse<T, typeof args>;
-  create: (args: CreateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
-  createMany: (
-    args: CreateManyArgs<T>,
+
+  create: <Args extends CreateArgs<T>>(
+    args: Args,
+  ) => Promise<CreateAndUpdateResponse<T>>;
+
+  createMany: <Args extends CreateManyArgs<T>>(
+    args: Args,
   ) => Promise<CreateAndUpdateResponse<T>[]>;
-  update: (args: UpdateArgs<T>) => Promise<CreateAndUpdateResponse<T>>;
-  updateMany: (
-    args: UpdateArgs<T>,
+
+  update: <Args extends UpdateArgs<T>>(
+    args: Args,
+  ) => Promise<CreateAndUpdateResponse<T>>;
+
+  updateMany: <Args extends UpdateArgs<T>>(
+    args: Args,
   ) => Promise<Array<CreateAndUpdateResponse<T>>>;
+
   // upsert: (args: CreateAndUpdateArgs<T>) => CreateAndUpdateResponse<T>;
+
   // count: (args: QueryArgs<T>) => number;
-  delete: (args: QueryArgs<T>) => Promise<QueryResponse<T, typeof args>>;
-  deleteMany: (
-    args: QueryArgs<T>,
-  ) => Promise<QueryResponse<T, typeof args>>;
+
+  // @ts-ignore TODO: delete should not use QueryArgs or QueryResponse
+  delete: <Args extends QueryArgs<T>>(
+    args: Args,
+  ) => Promise<QueryResponse<T, Args>>;
+
+  // @ts-ignore TODO: deleteMany should not use QueryArgs or QueryResponse
+  deleteMany: <Args extends QueryArgs<T>>(
+    args: Args,
+  ) => Promise<QueryResponse<T, Args>>;
+
   // aggregate: (args: QueryArgs<T>) => QueryResponse<T, typeof args>;
 }
 
@@ -60,7 +83,7 @@ export type RelationDefinition = [
    * to-many relation, if it's not an array, then its treated as a
    * to-one relation.
    */
-  relationSchema: ReturnType<typeof z.object>[] | ReturnType<typeof z.object>,
+  relationSchema: [ReturnType<typeof z.object>] | ReturnType<typeof z.object>,
   /**
    * LocalKey is a string if this schema is the one defining the relation,
    * undefined if this schema is the target of the relation.
@@ -78,9 +101,43 @@ export type QueryResponse<
   T extends TableDefinition,
   PassedInArgs extends QueryArgs<T>,
 > = WithVersionstamp<
-  // @todo: these types need fixing
-  z.output<T["schema"]>
->; // & PassedInArgs['include'] extends undefined ? {} : PassedInArgs['include']
+  z.output<T["schema"]> & Include<T["relations"], PassedInArgs["include"]>
+>;
+
+type Nothing = {};
+
+type Include<
+  Relations extends TableDefinition["relations"],
+  ToBeIncluded extends IncludeDetails<Relations> | undefined,
+> = Relations extends Record<string, RelationDefinition>
+  ? ToBeIncluded extends Record<string, unknown> ? {
+      [Rel in keyof Relations]: Relations[Rel][1] extends
+        [{ _output: infer OneToManyRelatedSchema }]
+        ? ToBeIncluded extends
+          Record<Rel, infer DetailsToInclude extends Record<string, unknown>>
+          ? MatchAndSelect<OneToManyRelatedSchema, DetailsToInclude>[]
+        : ToBeIncluded extends Record<Rel, true> ? OneToManyRelatedSchema[]
+        : Nothing
+        : Relations[Rel][1] extends { _output: infer OneToOneRelatedSchema }
+          ? ToBeIncluded extends
+            Record<Rel, infer DetailsToInclude extends Record<string, unknown>>
+            ? ToBeIncluded extends Record<Rel, true>
+              ? MatchAndSelect<OneToOneRelatedSchema, DetailsToInclude>
+            : Nothing
+          : OneToOneRelatedSchema
+        : Nothing;
+    }
+  : Nothing
+  : Nothing;
+
+type MatchAndSelect<SourceSchema, ToBeIncluded> = {
+  [Key in Extract<keyof SourceSchema, keyof ToBeIncluded>]:
+    ToBeIncluded[Key] extends infer ToInclude
+      ? SourceSchema[Key] extends infer Source ? ToInclude extends true ? Source
+        : MatchAndSelect<Source, ToInclude>
+      : never
+      : never;
+};
 
 export type DeleteResponse = { versionstamp: string };
 export type CreateAndUpdateResponse<T extends TableDefinition> =
@@ -106,22 +163,29 @@ export type UpdateArgs<T extends TableDefinition> = QueryArgs<T> & {
 
 export type QueryKvOptions = Parameters<Deno.Kv["get"]>[1];
 
+type IncludeDetails<Relations extends TableDefinition["relations"]> =
+  Relations extends Record<string, RelationDefinition> ? {
+      [Rel in keyof Relations]?:
+        | true
+        | (Relations[Rel][1] extends [{ _output: infer OneToManyRelatedSchema }]
+          ? Includable<OneToManyRelatedSchema>
+          : Relations[Rel][1] extends { _output: infer OneToOneRelatedSchema }
+            ? Includable<OneToOneRelatedSchema>
+          : never);
+    }
+    : never;
+
+type Includable<T> = T extends Record<string, unknown>
+  ? { [K in keyof T]?: true | Includable<T[K]> }
+  : never;
+
 export type QueryArgs<T extends TableDefinition> = {
   where?: Partial<WithMaybeVersionstamp<z.infer<T["schema"]>>>;
   take?: number;
   skip?: number;
   select?: Partial<z.infer<T["schema"]>>;
   orderBy?: Partial<z.infer<T["schema"]>>;
-  include?: {
-    [K in keyof T["relations"]]:
-      | true
-      | Partial<
-        {
-          // @ts-expect-error -> TypeScript wizards, help me fix this!
-          [KK in keyof z.infer<T["relations"][K][1]>]: true;
-        }
-      >;
-  };
+  include?: IncludeDetails<T["relations"]>;
   distinct?: Array<keyof z.infer<T["schema"]>>;
   kvOptions?: QueryKvOptions;
 };
