@@ -41,8 +41,8 @@ Deno.test("include", async (t) => {
         myOrders: {
           name: true,
           createdAt: {
-            userReadable: true
-          }
+            userReadable: true,
+          },
         },
       },
     });
@@ -56,8 +56,8 @@ Deno.test("include", async (t) => {
       myOrders: [{
         name: "Cheeseburger",
         createdAt: {
-          userReadable: '1970'
-        }
+          userReadable: "1970",
+        },
       }],
     });
   });

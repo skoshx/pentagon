@@ -11,7 +11,7 @@ export const Order = z.object({
   id: z.string().uuid().describe("primary, unique"),
   createdAt: z.object({
     date: z.date(),
-    userReadable: z.string()
+    userReadable: z.string(),
   }),
   name: z.string(),
   userId: z.string().uuid(),
@@ -68,7 +68,7 @@ export async function populateMockDatabase(
       id: "aaa62b91-a021-41c3-a2ce-ef079859d59c",
       createdAt: {
         date: new Date(0),
-        userReadable: '1970'
+        userReadable: "1970",
       },
       userId: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "Cheeseburger",
