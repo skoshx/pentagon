@@ -42,7 +42,7 @@ const db = createPentagon(kv, {
   users: {
     schema: User,
     relations: {
-      myOrders: ["orders", [Order], undefined, "userId"],
+      myOrders: ["orders", [Order], "id", "userId"],
     },
   },
   orders: {
