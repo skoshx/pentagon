@@ -111,7 +111,6 @@ export async function populateMockDatabase(
 }
 
 export async function clearMocks() {
-  const kv = await Deno.openKv();
   for await (const x of kv.list({ prefix: ["users"] })) {
     await kv.delete(x.key);
   }
