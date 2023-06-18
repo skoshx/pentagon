@@ -9,12 +9,21 @@ export const User = z.object({
 
 export const Order = z.object({
   id: z.string().uuid().describe("primary, unique"),
-  createdAt: z.object({
-    date: z.date(),
-    userReadable: z.string(),
-  }),
+  createdAt: z.date(),
   name: z.string(),
   userId: z.string().uuid(),
+});
+
+export const Post = z.object({
+  id: z.string().uuid().describe("primary, unique"),
+  createdAt: z.date(),
+  title: z.string(),
+});
+
+export const Category = z.object({
+  id: z.string().uuid().describe("primary, unique"),
+  createdAt: z.date(),
+  name: z.string(),
 });
 
 export function removeVersionstamps<T = unknown>(items: Deno.KvEntry<T>[]) {
@@ -35,12 +44,28 @@ export function removeVersionstamp<
 
 export const kv = await Deno.openKv();
 
+/*
+
+export const Post = z.object({
+  id: z.string().uuid().describe("primary, unique"),
+  createdAt: z.date(),
+  title: z.string(),
+})
+
+export const Category = z.object({
+  id: z.string().uuid().describe("primary, unique"),
+  createdAt: z.date(),
+  name: z.string(),
+})
+
+*/
+
 export function createMockDatabase() {
   return createPentagon(kv, {
     users: {
       schema: User,
       relations: {
-        myOrders: ["orders", [Order], undefined, "userId"],
+        myOrders: ["orders", [Order], "id", "userId"],
       },
     },
     orders: {
@@ -49,6 +74,18 @@ export function createMockDatabase() {
         user: ["users", User, "userId", "id"],
       },
     },
+    /* posts: {
+      schema: Post,
+      relations: {
+        categories: ["categories", [Category], undefined, undefined]
+      }
+    },
+    categories: {
+      schema: Category,
+      relations: {
+        posts: ["posts", [Post], undefined, undefined]
+      }
+    } */
   });
 }
 
@@ -66,19 +103,14 @@ export async function populateMockDatabase(
   await db.orders.create({
     data: {
       id: "aaa62b91-a021-41c3-a2ce-ef079859d59c",
-      createdAt: {
-        date: new Date(0),
-        userReadable: "1970",
-      },
+      createdAt: new Date(0),
       userId: "67218087-d9a8-4a57-b058-adc01f179ff9",
       name: "Cheeseburger",
     },
   });
 }
 
-export async function clearMocks(
-  db: Awaited<ReturnType<typeof createMockDatabase>>,
-) {
+export async function clearMocks() {
   const kv = await Deno.openKv();
   for await (const x of kv.list({ prefix: ["users"] })) {
     await kv.delete(x.key);
@@ -87,7 +119,4 @@ export async function clearMocks(
     await kv.delete(x.key);
   }
   await kv.close();
-  // await
-  // await db.close()
-  // await db.users.deleteMany({});
 }

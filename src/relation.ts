@@ -14,22 +14,10 @@ export function getRelationSchema(
     : relationDefinition[1] as ReturnType<typeof z.object>;
 }
 
-/*
-
-export type RelationDefinition = [
-  relationSchemaName: string,
-  relationSchema: ReturnType<typeof z.object>[] | ReturnType<typeof z.object>,
-  localKey: LocalKey | undefined,
-  foreignKey: ForeignKey,
-];
-
-*/
-
 // @todo(skoshx): validate relation target etc…
-
 export function isValidRelationDefinition(
-  relationDefinition: RelationDefinition,
+  _relationDefinition: RelationDefinition,
 ) {
   // @todo(skoshx): implement
-  return false;
+  throw new Error("Not implemented");
 }

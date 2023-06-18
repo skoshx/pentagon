@@ -15,7 +15,7 @@ import { getKvInstance } from "../mod.ts";
 
 Deno.test("Create / Read / Update / Remove", async (t) => {
   const db = await createMockDatabase();
-  await clearMocks(db);
+  await clearMocks();
   await populateMockDatabase(db);
 
   const mockUsers: z.infer<typeof User>[] = [...new Array(5).keys()].map((
@@ -145,5 +145,5 @@ Deno.test("Create / Read / Update / Remove", async (t) => {
     });
   });
 
-  await clearMocks(db);
+  await clearMocks();
 });

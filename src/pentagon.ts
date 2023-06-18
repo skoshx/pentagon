@@ -176,8 +176,9 @@ async function findManyImpl<T extends TableDefinition>(
     kv,
     tableName,
     tableDefinition,
-    queryArgs as any,
-  ) as any;
+    // @ts-ignore
+    queryArgs,
+  ) as Awaited<ReturnType<PentagonMethods<T>["findMany"]>>;
 }
 
 async function findFirstImpl<T extends TableDefinition>(
@@ -187,5 +188,5 @@ async function findFirstImpl<T extends TableDefinition>(
   queryArgs: Parameters<PentagonMethods<T>["findFirst"]>[0],
 ): ReturnType<PentagonMethods<T>["findFirst"]> {
   return (await findMany(kv, tableName, tableDefinition, queryArgs as any))
-    ?.[0] as any;
+    ?.[0] as Awaited<ReturnType<PentagonMethods<T>["findFirst"]>>;
 }

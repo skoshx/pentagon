@@ -67,7 +67,7 @@ Deno.test("keysToIndexes", () => {
 
 Deno.test("whereToKeys", async (t) => {
   const db = await createMockDatabase();
-  await clearMocks(db);
+  await clearMocks();
   await populateMockDatabase(db);
 
   await t.step("primary key", async () => {
@@ -125,7 +125,7 @@ Deno.test("whereToKeys", async (t) => {
   });
 });
 
-Deno.test("selectFromEntry", (t) => {
+Deno.test("selectFromEntry", () => {
   const mockValue = {
     createdAt: new Date(0),
     id: "67218087-d9a8-4a57-b058-adc01f179ff9",

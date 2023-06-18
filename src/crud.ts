@@ -1,4 +1,5 @@
 // CRUD operations
+import { z } from "../deps.ts";
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
 import {
   keysToIndexes,
@@ -6,12 +7,13 @@ import {
   selectFromEntry,
   whereToKeys,
 } from "./keys.ts";
-import { getRelationSchema, isToManyRelation } from "./relation.ts";
+import { isToManyRelation } from "./relation.ts";
 import {
   DatabaseValue,
   QueryArgs,
   QueryKvOptions,
   TableDefinition,
+  WithMaybeVersionstamp,
   WithVersionstamp,
 } from "./types.ts";
 import { mergeValueAndVersionstamp } from "./util.ts";
@@ -151,7 +153,6 @@ export async function findMany<T extends TableDefinition>(
     queryArgs.where ?? {},
   );
 
-  // Include @todo: clean this up
   if (queryArgs.include) {
     for (
       const [relationName, relationValue] of Object.entries(queryArgs.include)
@@ -163,63 +164,27 @@ export async function findMany<T extends TableDefinition>(
           `No relation found for relation name "${relationName}", make sure it's ∂efined in your Pentagon configuration.`,
         );
       }
-
-      const relationSchema = getRelationSchema(relationDefinition);
-      const keys = schemaToKeys(
-        relationSchema,
-        typeof relationValue === "boolean" && relationValue === true
-          ? {}
-          : relationValue as any,
-      );
-      const indexKeys = keysToIndexes(relationDefinition[0], keys);
-
-      const relationFoundItems = await whereToKeys(
-        kv,
-        relationDefinition[0],
-        indexKeys,
-        {},
-      );
+      const tableName = relationDefinition[0];
+      const localKey = relationDefinition[2];
+      const foreignKey = relationDefinition[3];
 
       for (let i = 0; i < foundItems.length; i++) {
-        if (isToManyRelation(relationDefinition)) {
-          const entry = foundItems[i];
-          let value: Partial<Record<typeof relationName, unknown[]>>;
-          if (
-            typeof entry.value !== "object" ||
-            entry.value === null ||
-            relationName in entry.value === false ||
-            Array.isArray(
-                (entry.value as Record<typeof relationName, unknown>)[
-                  relationName
-                ],
-              ) === false
-          ) {
-            value = entry.value ??= {};
-            value[relationName] = [];
-          }
+        const foundRelationItems = await findMany(
+          kv,
+          tableName,
+          tableDefinition,
+          {
+            select: relationValue === true ? undefined : relationValue,
+            where: {
+              [foreignKey]: foundItems[i].value[localKey],
+            } as Partial<WithMaybeVersionstamp<z.infer<T["schema"]>>>,
+          },
+        );
 
-          // ensured that entry.value is of this type above
-          value ??= entry.value as Record<typeof relationName, unknown[]>;
-
-          if (typeof relationValue === "object") {
-            // Partial include
-            value![relationName]!.push(
-              ...selectFromEntry(
-                [relationFoundItems[i]],
-                typeof relationValue === "boolean" && relationValue === true
-                  ? {}
-                  : relationValue,
-              ).map((i) => i.value),
-            );
-          } else {
-            value[relationName]!.push(
-              relationFoundItems[i].value,
-            );
-          }
-        } else {
-          // @ts-ignore: bad at types
-          foundItems[i].value[relationName] = relationFoundItems[i].value;
-        }
+        // Add included relation value
+        foundItems[i].value[relationName] = isToManyRelation(relationDefinition)
+          ? foundRelationItems
+          : foundRelationItems?.[0];
       }
     }
   }

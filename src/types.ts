@@ -88,7 +88,7 @@ export type RelationDefinition = [
    * LocalKey is a string if this schema is the one defining the relation,
    * undefined if this schema is the target of the relation.
    */
-  localKey: LocalKey | undefined,
+  localKey: LocalKey,
   foreignKey: ForeignKey,
 ];
 
