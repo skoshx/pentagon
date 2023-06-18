@@ -117,5 +117,4 @@ export async function clearMocks() {
   for await (const x of kv.list({ prefix: ["orders"] })) {
     await kv.delete(x.key);
   }
-  await kv.close();
 }
