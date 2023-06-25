@@ -8,22 +8,22 @@ import { AccessKey, KeyProperty, QueryArgs, TableDefinition } from "./types.ts";
 export const KeyPropertySchema = z.enum(["primary", "unique", "index"]);
 
 export function parseKeyProperties(keyPropertyString: string): KeyProperty[] {
-  const properties = keyPropertyString.split(",").map((key) => key.trim());
-  const returnProperties: KeyProperty[] = [];
-  for (let i = 0; i < properties.length; i++) {
-    const { success } = KeyPropertySchema.safeParse(properties[i]);
-    if (!success) {
-      throw new PentagonKeyError(
-        `Error parsing property string "${keyPropertyString}". Your schema has invalid properties. Properties TODO are supported, you passed in "${
-          properties[i]
-        }"`,
-      );
-    }
-
-    returnProperties.push(properties[i] as KeyProperty);
-  }
-
-  return returnProperties;
+  return keyPropertyString
+    .split(",")
+    .map((key) => key.trim())
+    .map((key) => {
+      try {
+        return KeyPropertySchema.parse(key);
+      } catch {
+        throw new PentagonKeyError(
+          `Error parsing property string "${keyPropertyString}". Your schema has invalid properties. Properties ${
+            KeyPropertySchema.options.join(
+              ", ",
+            )
+          } are supported, you passed in "${key}"`,
+        );
+      }
+    });
 }
 
 export function schemaToKeys<T extends ReturnType<typeof z.object>>(
