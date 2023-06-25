@@ -4,7 +4,8 @@
 
 # pentagon
 
-[![Github Actions][github-actions-src]][github-actions-href]
+[![Test Github Action][github-actions-test-src]][github-actions-test-href]
+[![Lint Github Action][github-actions-lint-src]][github-actions-lint-href]
 
 > Prisma like ORM built on top of Deno KV. Allows you to write your database
 > schemas and relations using Zod schemas, and run queries using familiar syntax
@@ -118,12 +119,14 @@ $ deno test --unstable
 
 Made with ❤️ in Helsinki, Finland.
 
-Published under [MIT License](./LICENSE).
+Published under [MIT License](./LICENSE.md).
 
 <!-- Links -->
 
-[github-actions-href]: https://github.com/skoshx/pentagon/actions/workflows/ci.yml
+[github-actions-test-href]: https://github.com/skoshx/pentagon/actions/workflows/test.yml
+[github-actions-lint-href]: https://github.com/skoshx/pentagon/actions/workflows/lint.yml
 
 <!-- Badges -->
 
-[github-actions-src]: https://github.com/skoshx/pentagon/actions/workflows/ci.yml/badge.svg
+[github-actions-test-src]: https://github.com/skoshx/pentagon/actions/workflows/test.yml/badge.svg
+[github-actions-lint-src]: https://github.com/skoshx/pentagon/actions/workflows/lint.yml/badge.svg
