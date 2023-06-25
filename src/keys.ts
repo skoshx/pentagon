@@ -4,6 +4,7 @@ import { listTable, read } from "./crud.ts";
 import { PentagonKeyError } from "./errors.ts";
 import { findItemsBySearch } from "./search.ts";
 import { AccessKey, KeyProperty, QueryArgs, TableDefinition } from "./types.ts";
+import { isKeyOf } from "./util.ts";
 
 export const KeyPropertySchema = z.enum(["primary", "unique", "index"]);
 
@@ -109,24 +110,24 @@ export async function whereToKeys<
   );
 }
 
-export function selectFromEntry<T, Items = Partial<{ [K in keyof T]: true }>>(
-  items: Deno.KvEntry<T>[],
-  selectItems: Items,
-  // @ts-expect-error: not sure how to get this to work without the `Type 'keyof Items' does not satisfy the constraint 'keyof T'` error.
-): Deno.KvEntry<Pick<T, keyof Items>>[] {
-  // @ts-expect-error: fix types
-  const selectedValues: Deno.KvEntry<Pick<T, keyof Items>>[] = [
-    ...items.map((i) => ({ ...i, value: {} })),
-  ];
+export function selectFromEntries<
+  T extends TableDefinition,
+  Q extends QueryArgs<T>,
+  S extends NonNullable<Q["select"]>,
+>(
+  items: Deno.KvEntry<z.output<T["schema"]>>[],
+  select: S,
+): Deno.KvEntry<Pick<z.output<T["schema"]>, keyof S & string>>[] {
+  return items.map((item) => {
+    item.value = Object.keys(select).reduce<Partial<T["schema"]>>(
+      (previous, current) =>
+        !isKeyOf(current, item.value) ? previous : {
+          ...previous,
+          [current]: item.value[current],
+        },
+      {},
+    );
 
-  // @ts-expect-error: don't know how to type this
-  for (const [selectKey] of Object.entries(selectItems)) {
-    // selectedValues
-    for (let i = 0; i < selectedValues.length; i++) {
-      // @ts-ignore: cant do types
-      selectedValues[i].value[selectKey] = items[i].value[selectKey];
-    }
-  }
-
-  return selectedValues;
+    return item;
+  });
 }

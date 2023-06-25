@@ -10,3 +10,10 @@ export function mergeValueAndVersionstamp<
     versionstamp: entry.versionstamp,
   };
 }
+
+export function isKeyOf<T extends Record<string, unknown>>(
+  value: string | number | symbol,
+  record: T,
+): value is keyof T {
+  return value in record;
+}

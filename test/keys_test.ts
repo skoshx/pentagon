@@ -11,7 +11,7 @@ import { z } from "../deps.ts";
 import {
   keysToIndexes,
   schemaToKeys,
-  selectFromEntry,
+  selectFromEntries,
   whereToKeys,
 } from "../src/keys.ts";
 
@@ -125,7 +125,7 @@ Deno.test("whereToKeys", async (t) => {
   });
 });
 
-Deno.test("selectFromEntry", () => {
+Deno.test("selectFromEntries", () => {
   const mockValue = {
     createdAt: new Date(0),
     id: "67218087-d9a8-4a57-b058-adc01f179ff9",
@@ -139,13 +139,13 @@ Deno.test("selectFromEntry", () => {
     },
   ];
 
-  const selectedItems = selectFromEntry(items, { id: true });
+  const selectedItems = selectFromEntries(items, { id: true });
 
   assertEquals(selectedItems[0].value.id, mockValue.id);
   // @ts-expect-error: using expect error as a type test
   assertEquals(selectedItems[0].value.createdAt, undefined);
 
-  assertEquals(selectFromEntry(items, { id: true }), [
+  assertEquals(selectFromEntries(items, { id: true }), [
     {
       key: ["mock-key"],
       value: {
