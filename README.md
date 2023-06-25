@@ -22,7 +22,7 @@
 
 ```typescript
 import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import { createPentagon } from "https://deno.land/x/pentagon@v0.0.3/mod.ts";
+import { createPentagon } from "https://deno.land/x/pentagon/mod.ts";
 const kv = await Deno.openKv();
 
 export const User = z.object({
