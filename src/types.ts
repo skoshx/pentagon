@@ -101,11 +101,18 @@ export type QueryResponse<
   T extends TableDefinition,
   PassedInArgs extends QueryArgs<T>,
 > = WithVersionstamp<
-  z.output<T["schema"]> & Include<T["relations"], PassedInArgs["include"]>
+  & Select<T, PassedInArgs["select"]>
+  & Include<T["relations"], PassedInArgs["include"]>
 >;
 
 type Nothing = {};
 
+type Select<
+  T extends TableDefinition,
+  Selected extends QueryArgs<T>["select"] | undefined,
+> = Selected extends Partial<Record<string, unknown>>
+  ? Pick<z.output<T["schema"]>, keyof Selected & string>
+  : z.output<T["schema"]>;
 type Include<
   Relations extends TableDefinition["relations"],
   ToBeIncluded extends IncludeDetails<Relations> | undefined,
@@ -183,7 +190,7 @@ export type QueryArgs<T extends TableDefinition> = {
   where?: Partial<WithMaybeVersionstamp<z.infer<T["schema"]>>>;
   take?: number;
   skip?: number;
-  select?: Partial<z.infer<T["schema"]>>;
+  select?: Partial<Record<keyof z.infer<T["schema"]>, true>>;
   orderBy?: Partial<z.infer<T["schema"]>>;
   include?: IncludeDetails<T["relations"]>;
   distinct?: Array<keyof z.infer<T["schema"]>>;
