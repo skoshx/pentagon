@@ -90,7 +90,7 @@ async function createManyImpl<T extends TableDefinition>(
 async function deleteImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
-  tableDefinition: TableDefinition,
+  tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["delete"]>[0],
 ) {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
@@ -108,7 +108,7 @@ async function deleteImpl<T extends TableDefinition>(
 async function deleteManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
-  tableDefinition: TableDefinition,
+  tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["deleteMany"]>[0],
 ) {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
@@ -126,7 +126,7 @@ async function deleteManyImpl<T extends TableDefinition>(
 async function updateManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
-  tableDefinition: TableDefinition,
+  tableDefinition: T,
   updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
 ) {
   const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
@@ -163,7 +163,7 @@ async function updateManyImpl<T extends TableDefinition>(
 async function updateImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
-  tableDefinition: TableDefinition,
+  tableDefinition: T,
   updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
 ): ReturnType<PentagonMethods<T>["update"]> {
   return (await updateManyImpl(kv, tableName, tableDefinition, updateArgs))
@@ -173,14 +173,13 @@ async function updateImpl<T extends TableDefinition>(
 async function findManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
-  tableDefinition: TableDefinition,
+  tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["findMany"]>[0],
 ) {
   return await findMany(
     kv,
     tableName,
     tableDefinition,
-    // @ts-ignore
     queryArgs,
   ) as Awaited<ReturnType<PentagonMethods<T>["findMany"]>>;
 }
@@ -188,9 +187,9 @@ async function findManyImpl<T extends TableDefinition>(
 async function findFirstImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
-  tableDefinition: TableDefinition,
+  tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["findFirst"]>[0],
 ) {
-  return (await findMany(kv, tableName, tableDefinition, queryArgs as any))
+  return (await findMany(kv, tableName, tableDefinition, queryArgs))
     ?.[0] as Awaited<ReturnType<PentagonMethods<T>["findFirst"]>>;
 }
