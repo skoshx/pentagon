@@ -23,16 +23,20 @@ export function createPentagon<T extends Record<string, TableDefinition>>(
         createMany: (createManyArgs) =>
           createManyImpl(kv, tableName, tableDefinition, createManyArgs),
         delete: (queryArgs) =>
+          // @ts-ignore
           deleteImpl(kv, tableName, tableDefinition, queryArgs),
         deleteMany: (queryArgs) =>
+          // @ts-ignore
           deleteManyImpl(kv, tableName, tableDefinition, queryArgs),
         update: (queryArgs) =>
           updateImpl(kv, tableName, tableDefinition, queryArgs),
         updateMany: (queryArgs) =>
           updateManyImpl(kv, tableName, tableDefinition, queryArgs),
         findMany: (queryArgs) =>
+          // @ts-ignore
           findManyImpl(kv, tableName, tableDefinition, queryArgs),
         findFirst: (queryArgs) =>
+          // @ts-ignore
           findFirstImpl(kv, tableName, tableDefinition, queryArgs),
       };
 
@@ -88,7 +92,7 @@ async function deleteImpl<T extends TableDefinition>(
   tableName: string,
   tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["delete"]>[0],
-): ReturnType<PentagonMethods<T>["delete"]> {
+) {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
@@ -106,7 +110,7 @@ async function deleteManyImpl<T extends TableDefinition>(
   tableName: string,
   tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["deleteMany"]>[0],
-): ReturnType<PentagonMethods<T>["deleteMany"]> {
+) {
   const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
@@ -124,7 +128,7 @@ async function updateManyImpl<T extends TableDefinition>(
   tableName: string,
   tableDefinition: T,
   updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
-): ReturnType<PentagonMethods<T>["updateMany"]> {
+) {
   const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
@@ -171,7 +175,7 @@ async function findManyImpl<T extends TableDefinition>(
   tableName: string,
   tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["findMany"]>[0],
-): ReturnType<PentagonMethods<T>["findMany"]> {
+) {
   return await findMany(
     kv,
     tableName,
@@ -185,7 +189,7 @@ async function findFirstImpl<T extends TableDefinition>(
   tableName: string,
   tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["findFirst"]>[0],
-): ReturnType<PentagonMethods<T>["findFirst"]> {
+) {
   return (await findMany(kv, tableName, tableDefinition, queryArgs))
     ?.[0] as Awaited<ReturnType<PentagonMethods<T>["findFirst"]>>;
 }
