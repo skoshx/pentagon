@@ -26,6 +26,12 @@ export const Category = z.object({
   name: z.string(),
 });
 
+export const AgreedTerms = z.object({
+  id: z.number().describe("primary, unique"),
+  createdAt: z.date(),
+  updatedAt: z.date().nullable(),
+});
+
 export function removeVersionstamps<T = unknown>(items: Deno.KvEntry<T>[]) {
   return items.map((item) => {
     const { versionstamp: _versionstamp, ...rest } = item;
@@ -73,6 +79,9 @@ export function createMockDatabase() {
       relations: {
         user: ["users", User, "userId", "id"],
       },
+    },
+    agreedTerms: {
+      schema: AgreedTerms,
     },
     /* posts: {
       schema: Post,

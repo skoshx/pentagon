@@ -28,5 +28,28 @@ Deno.test("include", async (t) => {
     });
   });
 
+  await t.step("regression #11", async () => {
+    await db.agreedTerms.create({
+      data: {
+        id: 123,
+        createdAt: new Date(0),
+        updatedAt: null,
+      },
+    });
+
+    const result = await db.agreedTerms.findFirst({
+      where: {
+        id: 123,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    assertEquals(removeVersionstamp(result), {
+      id: 123,
+    });
+  });
+
   clearMocks();
 });
