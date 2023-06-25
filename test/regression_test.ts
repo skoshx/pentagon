@@ -2,7 +2,7 @@ import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
 import { clearMocks, createMockDatabase, removeVersionstamp } from "./util.ts";
 
 Deno.test("include", async (t) => {
-  const db = await createMockDatabase();
+  const db = createMockDatabase();
 
   await t.step("regression #8", async () => {
     // Create user without creating orders
@@ -28,5 +28,5 @@ Deno.test("include", async (t) => {
     });
   });
 
-  clearMocks();
+  await clearMocks();
 });
