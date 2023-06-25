@@ -1,4 +1,4 @@
-name: ci
+name: test
 
 on:
   pull_request:
@@ -9,17 +9,6 @@ on:
       - main
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-      - uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-      - name: 🔠 Lint project
-        run: deno lint
-
   test:
     runs-on: ubuntu-latest
 
