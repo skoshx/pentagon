@@ -4,7 +4,7 @@ import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
 import {
   keysToIndexes,
   schemaToKeys,
-  selectFromEntry,
+  selectFromEntries,
   whereToKeys,
 } from "./keys.ts";
 import { isToManyRelation } from "./relation.ts";
@@ -191,7 +191,7 @@ export async function findMany<T extends TableDefinition>(
 
   // Select
   const selectedItems = queryArgs.select
-    ? selectFromEntry(foundItems, queryArgs.select)
+    ? selectFromEntries(foundItems, queryArgs.select)
     : foundItems;
 
   return selectedItems.map((item) => mergeValueAndVersionstamp(item));
