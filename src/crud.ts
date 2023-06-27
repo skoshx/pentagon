@@ -9,6 +9,8 @@ import {
 } from "./keys.ts";
 import { isToManyRelation } from "./relation.ts";
 import {
+  CreateArgs,
+  CreateManyArgs,
   DatabaseValue,
   QueryArgs,
   QueryKvOptions,
@@ -110,21 +112,21 @@ export async function update<T extends Record<string, DatabaseValue>>(
   throw new PentagonCreateItemError(`Could not update item.`);
 }
 
-export async function create<T extends Record<string, DatabaseValue>>(
+export async function create<T extends TableDefinition>(
   kv: Deno.Kv,
-  item: T,
-  keys: Deno.KvKey[],
-): Promise<WithVersionstamp<T>> {
+  tableName: string,
+  tableDefinition: T,
+  createArgs: CreateArgs<T>,
+): Promise<WithVersionstamp<z.output<T["schema"]>>> {
   let res = kv.atomic();
+  const keys = schemaToKeys(tableDefinition.schema, createArgs.data);
+  const indexKeys = keysToIndexes(tableName, keys);
+  const item: z.output<T["schema"]> = tableDefinition.schema.parse(
+    createArgs.data,
+  );
 
-  // Checks
-  for (let i = 0; i < keys.length; i++) {
-    res = chainAccessKeyCheck(res, keys[i]);
-  }
-
-  // Sets
-  for (let i = 0; i < keys.length; i++) {
-    res = chainSet(res, keys[i], item);
+  for (const key of indexKeys) {
+    res = res.check({ key, versionstamp: null }).set(key, item); // TODO: Currently checks ALL keys, should only check unique ones
   }
 
   const commitResult = await res.commit();
@@ -135,7 +137,77 @@ export async function create<T extends Record<string, DatabaseValue>>(
       versionstamp: commitResult.versionstamp,
     };
   }
+
   throw new PentagonCreateItemError(`Could not create item.`);
+}
+
+export async function createMany<T extends TableDefinition>(
+  kv: Deno.Kv,
+  tableName: string,
+  tableDefinition: T,
+  createManyArgs: CreateManyArgs<T>,
+): Promise<WithVersionstamp<z.output<T["schema"]>>[]> {
+  let res = kv.atomic();
+  const items: z.output<T["schema"]>[] = [];
+
+  for (const data of createManyArgs.data) {
+    const keys = schemaToKeys(tableDefinition.schema, data);
+    const indexKeys = keysToIndexes(tableName, keys);
+    const item: z.output<T["schema"]> = tableDefinition.schema.parse(
+      data,
+    );
+
+    for (const key of indexKeys) {
+      res = res.check({ key, versionstamp: null }).set(key, item); // TODO: Currently checks ALL keys, should only check unique ones
+    }
+
+    items.push(item);
+  }
+
+  const commitResult = await res.commit();
+
+  if (commitResult.ok) {
+    return items.map((item) => ({
+      ...item,
+      versionstamp: commitResult.versionstamp,
+    }));
+  }
+
+  throw new PentagonCreateItemError(`Could not create items.`);
+}
+
+export async function commit<T extends TableDefinition>(
+  res: Deno.AtomicOperation,
+  item: z.output<T["schema"]>,
+): Promise<WithVersionstamp<z.output<T["schema"]>>>;
+export async function commit<T extends TableDefinition>(
+  res: Deno.AtomicOperation,
+  items: z.output<T["schema"]>[],
+): Promise<WithVersionstamp<z.output<T["schema"]>>[]>;
+export async function commit<T extends TableDefinition>(
+  res: Deno.AtomicOperation,
+  items: z.output<T["schema"]>[] | z.output<T["schema"]>,
+): Promise<
+  | WithVersionstamp<z.output<T["schema"]>>[]
+  | WithVersionstamp<z.output<T["schema"]>>
+> {
+  const commitResult = await res.commit();
+
+  if (commitResult.ok) {
+    if (Array.isArray(items)) {
+      return items.map((item) => ({
+        ...item,
+        versionstamp: commitResult.versionstamp,
+      }));
+    } else {
+      return {
+        ...items,
+        versionstamp: commitResult.versionstamp,
+      };
+    }
+  }
+
+  throw new PentagonCreateItemError(`Could not commit changes.`);
 }
 
 export async function findMany<T extends TableDefinition>(
