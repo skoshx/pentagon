@@ -63,11 +63,7 @@ export async function remove(
 
 export async function update<
   T extends WithVersionstamp<Record<string, DatabaseValue>>,
->(
-  kv: Deno.Kv,
-  items: T[],
-  keys: Deno.KvKey[],
-): Promise<WithVersionstamp<T>[]> {
+>(kv: Deno.Kv, items: T[], keys: Deno.KvKey[]): Promise<T[]> {
   let res = kv.atomic();
 
   // Iterate through items
@@ -86,8 +82,8 @@ export async function update<
   const commitResult = await res.commit();
 
   if (commitResult.ok) {
-    return items.map((i) => ({
-      ...i,
+    return items.map((item) => ({
+      ...item,
       versionstamp: commitResult.versionstamp,
     }));
   }
@@ -139,7 +135,9 @@ export async function findMany<T extends TableDefinition>(
 
   if (queryArgs.include) {
     for (
-      const [relationName, relationValue] of Object.entries(queryArgs.include)
+      const [relationName, relationValue] of Object.entries(
+        queryArgs.include,
+      )
     ) {
       // Relation name
       const relationDefinition = tableDefinition.relations?.[relationName];
