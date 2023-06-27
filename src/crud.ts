@@ -63,28 +63,28 @@ export async function remove(
 
 export async function update<
   T extends TableDefinition,
-  Item extends WithVersionstamp<z.output<T["schema"]>>,
->(kv: Deno.Kv, items: Item[], keys: Deno.KvKey[]): Promise<Item[]> {
+  Item extends z.output<T["schema"]>,
+>(
+  kv: Deno.Kv,
+  entries: Deno.KvEntry<Item>[],
+): Promise<WithVersionstamp<Item>[]> {
   let res = kv.atomic();
 
-  // Iterate through items
-  for (const item of items) {
-    // Checks
-    for (const key of keys) {
-      res = res.check({ key, versionstamp: item.versionstamp });
-    }
+  // Checks
+  for (const entry of entries) {
+    res = res.check(entry);
+  }
 
-    // Sets
-    for (const key of keys) {
-      res = res.set(key, removeVersionstamp(item));
-    }
+  // Sets
+  for (const { value, key } of entries) {
+    res = res.set(key, value);
   }
 
   const commitResult = await res.commit();
 
   if (commitResult.ok) {
-    return items.map((item) => ({
-      ...item,
+    return entries.map(({ value }) => ({
+      ...value,
       versionstamp: commitResult.versionstamp,
     }));
   }

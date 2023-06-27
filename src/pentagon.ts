@@ -144,10 +144,12 @@ async function updateManyImpl<T extends TableDefinition>(
     // @todo: should we throw?
     throw new PentagonUpdateError(`Updating zero elements.`);
   }
+
   try {
-    const updatedItems: WithVersionstamp<z.output<T["schema"]>>[] = foundItems
+    const updatedItems = foundItems
       .map((existingItem) => ({
-        ...tableDefinition.schema.parse({
+        key: existingItem.key,
+        value: tableDefinition.schema.parse({
           ...existingItem.value,
           ...updateArgs.data,
         }),
@@ -157,7 +159,6 @@ async function updateManyImpl<T extends TableDefinition>(
     return await update(
       kv,
       updatedItems,
-      foundItems.map((i) => i.key),
     );
   } catch {
     throw new PentagonUpdateError(`An error occurred while updating items`);
