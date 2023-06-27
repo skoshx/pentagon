@@ -149,14 +149,14 @@ async function updateManyImpl<T extends TableDefinition>(
     value: {
       ...existingItem.value,
       ...updateArgs.data,
+      versionstamp: updateArgs.data.versionstamp ?? existingItem.versionstamp,
     },
-    versionstamp: updateArgs.data.versionstamp ?? existingItem.versionstamp,
   }));
 
   return await update(
     kv,
     updatedItems.map((i) => i.value),
-    foundItems.map((i) => i.key),
+    updatedItems.map((i) => i.key),
   );
 }
 

@@ -1,5 +1,6 @@
 // CRUD operations
 import { z } from "../deps.ts";
+import { removeVersionstamp } from "../test/util.ts";
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
 import {
   keysToIndexes,
@@ -17,22 +18,6 @@ import {
   WithVersionstamp,
 } from "./types.ts";
 import { mergeValueAndVersionstamp } from "./util.ts";
-
-function chainAccessKeyCheck(
-  op: Deno.AtomicOperation,
-  key: Deno.KvKey,
-  versionstamp: string | null = null,
-) {
-  return op.check({ key: key, versionstamp });
-}
-
-function chainSet<T>(op: Deno.AtomicOperation, key: Deno.KvKey, item: T) {
-  return op.set(key, item);
-}
-
-function chainDelete<T>(op: Deno.AtomicOperation, key: Deno.KvKey) {
-  return op.delete(key);
-}
 
 export async function listTable<T>(kv: Deno.Kv, tableName: string) {
   const items = new Array<Deno.KvEntry<T>>();
@@ -62,8 +47,8 @@ export async function remove(
     res = chainAccessKeyCheck(res, keys[i], null);
   } */
 
-  for (let i = 0; i < keys.length; i++) {
-    res = chainDelete(res, keys[i]);
+  for (const key of keys) {
+    res = res.delete(key);
   }
 
   const commitResult = await res.commit();
@@ -76,7 +61,9 @@ export async function remove(
   throw new PentagonDeleteItemError(`Could not delete item.`);
 }
 
-export async function update<T extends Record<string, DatabaseValue>>(
+export async function update<
+  T extends WithVersionstamp<Record<string, DatabaseValue>>,
+>(
   kv: Deno.Kv,
   items: T[],
   keys: Deno.KvKey[],
@@ -84,18 +71,15 @@ export async function update<T extends Record<string, DatabaseValue>>(
   let res = kv.atomic();
 
   // Iterate through items
-  for (let i = 0; i < items.length; i++) {
-    // Checks (through keys)
-    for (let j = 0; j < keys.length; j++) {
-      res = chainAccessKeyCheck(
-        res,
-        keys[j],
-        (items[j].versionstamp as string) ?? null,
-      );
+  for (const item of items) {
+    // Checks
+    for (const key of keys) {
+      res = res.check({ key, versionstamp: item.versionstamp });
     }
-    // Sets (through keys)
-    for (let j = 0; j < keys.length; j++) {
-      res = chainSet(res, keys[j], items[i]);
+
+    // Sets
+    for (const key of keys) {
+      res = res.set(key, removeVersionstamp(item));
     }
   }
 
@@ -118,13 +102,13 @@ export async function create<T extends Record<string, DatabaseValue>>(
   let res = kv.atomic();
 
   // Checks
-  for (let i = 0; i < keys.length; i++) {
-    res = chainAccessKeyCheck(res, keys[i]);
+  for (const key of keys) {
+    res = res.check({ key, versionstamp: null });
   }
 
   // Sets
-  for (let i = 0; i < keys.length; i++) {
-    res = chainSet(res, keys[i], item);
+  for (const key of keys) {
+    res = res.set(key, item);
   }
 
   const commitResult = await res.commit();
