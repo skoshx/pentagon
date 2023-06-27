@@ -1,4 +1,3 @@
-import { z } from "../deps.ts";
 import { create, findMany, remove, update } from "./crud.ts";
 import { PentagonUpdateError } from "./errors.ts";
 import { keysToIndexes, schemaToKeys, whereToKeys } from "./keys.ts";
@@ -7,7 +6,6 @@ import type {
   PentagonMethods,
   PentagonResult,
   TableDefinition,
-  WithVersionstamp,
 } from "./types.ts";
 
 export function createPentagon<T extends Record<string, TableDefinition>>(

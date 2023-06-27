@@ -1,6 +1,5 @@
 // CRUD operations
 import { z } from "../deps.ts";
-import { removeVersionstamp } from "../test/util.ts";
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
 import {
   keysToIndexes,
