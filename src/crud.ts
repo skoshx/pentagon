@@ -153,9 +153,7 @@ export async function createMany<T extends TableDefinition>(
   for (const data of createManyArgs.data) {
     const keys = schemaToKeys(tableDefinition.schema, data);
     const indexKeys = keysToIndexes(tableName, keys);
-    const item: z.output<T["schema"]> = tableDefinition.schema.parse(
-      data,
-    );
+    const item: z.output<T["schema"]> = tableDefinition.schema.parse(data);
 
     for (const key of indexKeys) {
       res = res.check({ key, versionstamp: null }).set(key, item); // TODO: Currently checks ALL keys, should only check unique ones
@@ -176,40 +174,6 @@ export async function createMany<T extends TableDefinition>(
   throw new PentagonCreateItemError(`Could not create items.`);
 }
 
-export async function commit<T extends TableDefinition>(
-  res: Deno.AtomicOperation,
-  item: z.output<T["schema"]>,
-): Promise<WithVersionstamp<z.output<T["schema"]>>>;
-export async function commit<T extends TableDefinition>(
-  res: Deno.AtomicOperation,
-  items: z.output<T["schema"]>[],
-): Promise<WithVersionstamp<z.output<T["schema"]>>[]>;
-export async function commit<T extends TableDefinition>(
-  res: Deno.AtomicOperation,
-  items: z.output<T["schema"]>[] | z.output<T["schema"]>,
-): Promise<
-  | WithVersionstamp<z.output<T["schema"]>>[]
-  | WithVersionstamp<z.output<T["schema"]>>
-> {
-  const commitResult = await res.commit();
-
-  if (commitResult.ok) {
-    if (Array.isArray(items)) {
-      return items.map((item) => ({
-        ...item,
-        versionstamp: commitResult.versionstamp,
-      }));
-    } else {
-      return {
-        ...items,
-        versionstamp: commitResult.versionstamp,
-      };
-    }
-  }
-
-  throw new PentagonCreateItemError(`Could not commit changes.`);
-}
-
 export async function findMany<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
@@ -227,7 +191,9 @@ export async function findMany<T extends TableDefinition>(
 
   if (queryArgs.include) {
     for (
-      const [relationName, relationValue] of Object.entries(queryArgs.include)
+      const [relationName, relationValue] of Object.entries(
+        queryArgs.include,
+      )
     ) {
       // Relation name
       const relationDefinition = tableDefinition.relations?.[relationName];
