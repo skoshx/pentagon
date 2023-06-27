@@ -1,3 +1,4 @@
+import { z } from "../deps.ts";
 import { create, findMany, remove, update } from "./crud.ts";
 import { PentagonUpdateError } from "./errors.ts";
 import { keysToIndexes, schemaToKeys, whereToKeys } from "./keys.ts";
@@ -6,6 +7,7 @@ import type {
   PentagonMethods,
   PentagonResult,
   TableDefinition,
+  WithVersionstamp,
 } from "./types.ts";
 
 export function createPentagon<T extends Record<string, TableDefinition>>(
@@ -127,8 +129,8 @@ async function updateManyImpl<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: T,
-  updateArgs: Parameters<PentagonMethods<T>["update"]>[0],
-) {
+  updateArgs: Parameters<PentagonMethods<T>["updateMany"]>[0],
+): ReturnType<PentagonMethods<T>["updateMany"]> {
   const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
@@ -142,22 +144,24 @@ async function updateManyImpl<T extends TableDefinition>(
     // @todo: should we throw?
     throw new PentagonUpdateError(`Updating zero elements.`);
   }
+  try {
+    const updatedItems: WithVersionstamp<z.output<T["schema"]>>[] = foundItems
+      .map((existingItem) => ({
+        ...tableDefinition.schema.parse({
+          ...existingItem.value,
+          ...updateArgs.data,
+        }),
+        versionstamp: updateArgs.data.versionstamp ?? existingItem.versionstamp,
+      }));
 
-  // Merge
-  const updatedItems = foundItems.map((existingItem) => ({
-    key: existingItem.key,
-    value: {
-      ...existingItem.value,
-      ...updateArgs.data,
-      versionstamp: updateArgs.data.versionstamp ?? existingItem.versionstamp,
-    },
-  }));
-
-  return await update(
-    kv,
-    updatedItems.map((i) => i.value),
-    updatedItems.map((i) => i.key),
-  );
+    return await update(
+      kv,
+      updatedItems,
+      foundItems.map((i) => i.key),
+    );
+  } catch {
+    throw new PentagonUpdateError(`An error occurred while updating items`);
+  }
 }
 
 async function updateImpl<T extends TableDefinition>(

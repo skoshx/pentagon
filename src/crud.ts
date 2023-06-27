@@ -62,8 +62,9 @@ export async function remove(
 }
 
 export async function update<
-  T extends WithVersionstamp<Record<string, DatabaseValue>>,
->(kv: Deno.Kv, items: T[], keys: Deno.KvKey[]): Promise<T[]> {
+  T extends TableDefinition,
+  Item extends WithVersionstamp<z.output<T["schema"]>>,
+>(kv: Deno.Kv, items: Item[], keys: Deno.KvKey[]): Promise<Item[]> {
   let res = kv.atomic();
 
   // Iterate through items
@@ -87,6 +88,7 @@ export async function update<
       versionstamp: commitResult.versionstamp,
     }));
   }
+
   throw new PentagonCreateItemError(`Could not update item.`);
 }
 
