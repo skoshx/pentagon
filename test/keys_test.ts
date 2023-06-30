@@ -22,20 +22,24 @@ Deno.test("schemaToKeys", () => {
     name: "John Doe",
   };
   // Primary key
-  assertEquals(schemaToKeys(User, user), [{
-    primary: true,
-    unique: true,
+  assertEquals(schemaToKeys("users", User, user), [{
+    type: "primary",
     value: "73a85d83-7325-46f0-a421-1bfac4cec68a",
   }]);
 
   // No values provided
-  assertEquals(schemaToKeys(User, {}), []);
+  assertEquals(schemaToKeys("users", User, {}), []);
 
   assertEquals(
-    schemaToKeys(User.extend({ email: z.string().email().describe("index") }), {
-      email: "john.doe@proton.me",
-    }),
+    schemaToKeys(
+      "users",
+      User.extend({ email: z.string().email().describe("index") }),
+      {
+        email: "john.doe@proton.me",
+      },
+    ),
     [{
+      type: "index",
       suffix: "_by_email",
       value: "john.doe@proton.me",
     }],
@@ -46,7 +50,7 @@ Deno.test("keysToIndexes", () => {
   // Primary key
   assertEquals(
     keysToIndexes("users", [{
-      primary: true,
+      type: "primary",
       value: "73a85d83-7325-46f0-a421-1bfac4cec68a",
     }]),
     [["users", "73a85d83-7325-46f0-a421-1bfac4cec68a"]],
@@ -55,10 +59,26 @@ Deno.test("keysToIndexes", () => {
   // Index
   assertEquals(
     keysToIndexes("users", [{
+      type: "unique",
       value: "john.doe@proton.me",
-      suffix: "_by_email",
+      suffix: "_by_unique_email",
     }]),
-    [["users_by_email", "john.doe@proton.me"]],
+    [["users_by_unique_email", "john.doe@proton.me"]],
+  );
+  assertEquals(
+    keysToIndexes("users", [{
+      type: "primary",
+      value: "73a85d83-7325-46f0-a421-1bfac4cec68a",
+    }, {
+      type: "index",
+      value: "blue",
+      suffix: "_by_favoriteColor",
+    }]),
+    [["users", "73a85d83-7325-46f0-a421-1bfac4cec68a"], [
+      "users_by_favoriteColor",
+      "blue",
+      "73a85d83-7325-46f0-a421-1bfac4cec68a",
+    ]],
   );
 
   // Indexes for unindexed values (everything other than `primary` & `index` keys)
@@ -74,7 +94,7 @@ Deno.test("whereToKeys", async (t) => {
     const whereQuery = {
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
     };
-    const accessKeys = schemaToKeys(User, whereQuery);
+    const accessKeys = schemaToKeys("users", User, whereQuery);
     const indexKeys = keysToIndexes("users", accessKeys);
     const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
     assertEquals(removeVersionstamps(foundItems), [
@@ -96,7 +116,7 @@ Deno.test("whereToKeys", async (t) => {
     const whereQuery = {
       name: "John Doe",
     };
-    const accessKeys = schemaToKeys(User, whereQuery);
+    const accessKeys = schemaToKeys("users", User, whereQuery);
     const indexKeys = keysToIndexes("users", accessKeys);
     const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
     assertEquals(removeVersionstamps(foundItems), [
@@ -118,7 +138,7 @@ Deno.test("whereToKeys", async (t) => {
     const whereQuery = {
       id: "nonexistent",
     };
-    const accessKeys = schemaToKeys(User, whereQuery);
+    const accessKeys = schemaToKeys("users", User, whereQuery);
     const indexKeys = keysToIndexes("users", accessKeys);
     const foundItems = await whereToKeys(kv, "users", indexKeys, whereQuery);
     assertEquals(foundItems, []);

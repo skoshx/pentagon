@@ -8,8 +8,12 @@ import { isKeyOf } from "./util.ts";
 
 export const KeyPropertySchema = z.enum(["primary", "unique", "index"]);
 
-export function parseKeyProperties(keyPropertyString: string): KeyProperty[] {
-  return keyPropertyString
+export function parseKeyProperties(
+  tableName: string,
+  property: string,
+  keyPropertyString: string,
+): KeyProperty | undefined {
+  const parsedProperties = keyPropertyString
     .split(",")
     .map((key) => key.trim())
     .map((key) => {
@@ -25,39 +29,63 @@ export function parseKeyProperties(keyPropertyString: string): KeyProperty[] {
         );
       }
     });
+
+  if (parsedProperties.length > 1) {
+    throw new Error(
+      `Table '${tableName}' can't have more than one type of index for property ${property}`,
+    );
+  }
+
+  return parsedProperties[0];
 }
 
 export function schemaToKeys<T extends ReturnType<typeof z.object>>(
+  tableName: string,
   schema: T,
   values: Partial<z.input<T>>,
 ): AccessKey[] {
-  const keys: AccessKey[] = [];
-
-  for (const [key, value] of Object.entries(schema.shape)) {
-    if (value.description) {
-      const parsedProperties = parseKeyProperties(value.description);
+  const accessKeys = Object.entries(schema.shape).reduce(
+    (current, [key, value]) => {
       const inputValue = values[key];
-      if (!inputValue) continue;
 
-      const newKey: AccessKey = { value: inputValue };
-
-      for (let i = 0; i < parsedProperties.length; i++) {
-        if (parsedProperties[i] === "primary") {
-          newKey.primary = true;
-        }
-        if (parsedProperties[i] === "unique") {
-          newKey.unique = true;
-        }
-        if (parsedProperties[i] === "index") {
-          newKey.suffix = `_by_${key}`;
-        }
+      if (!value.description || !inputValue) {
+        return current;
       }
 
-      keys.push(newKey);
-    }
+      const keyType = parseKeyProperties(tableName, key, value.description);
+
+      switch (keyType) {
+        case "primary":
+          current.push({ value: inputValue, type: "primary" });
+          break;
+        case "unique":
+          current.push({
+            value: inputValue,
+            type: "unique",
+            suffix: `_by_unique_${key}`,
+          });
+          break;
+        case "index":
+          current.push({
+            value: inputValue,
+            type: "index",
+            suffix: `_by_${key}`,
+          });
+          break;
+      }
+
+      return current;
+    },
+    [] as AccessKey[],
+  );
+
+  const primaryKeys = accessKeys.filter(({ type }) => type === "primary");
+
+  if (primaryKeys.length > 1) {
+    throw new Error(`Table ${tableName} Can't have more than one primary key`);
   }
 
-  return keys;
+  return accessKeys;
 }
 
 /**
@@ -69,22 +97,36 @@ export function keysToIndexes(
   tableName: string,
   accessKeys: AccessKey[],
 ): Deno.KvKey[] {
-  const keys: Deno.KvKey[] = [];
+  const primaryKey = accessKeys.find(({ type }) => type === "primary");
 
-  for (let i = 0; i < accessKeys.length; i++) {
-    // Primary key values
-    if (accessKeys[i].primary) {
-      keys.push([tableName, accessKeys[i].value]);
-      continue;
+  return accessKeys.map((accessKey) => {
+    // Primary key
+    if (accessKey.type === "primary") {
+      return [tableName, accessKey.value];
     }
-    // Indexed values
-    if (accessKeys[i].suffix) {
-      keys.push([`${tableName}${accessKeys[i].suffix}`, accessKeys[i].value]);
-      continue;
-    }
-  }
 
-  return keys;
+    // Unique indexed key
+    if (accessKey.type === "unique") {
+      return [`${tableName}${accessKey.suffix}`, accessKey.value];
+    }
+
+    // Non-unique indexed key
+    if (accessKey.type === "index") {
+      if (!primaryKey) {
+        throw new Error(
+          `Table '${tableName}' can't use a non-unique index without a primary index`,
+        );
+      }
+
+      return [
+        `${tableName}${accessKey.suffix}`,
+        accessKey.value,
+        primaryKey.value,
+      ];
+    }
+
+    throw new Error("Invalid access key");
+  });
 }
 
 export async function whereToKeys<
