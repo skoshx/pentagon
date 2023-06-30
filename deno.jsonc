@@ -1,7 +1,8 @@
 {
   "tasks": {
     "dev": "deno run --watch main.ts",
-    "test": "deno test --unstable"
+    "test": "deno test --unstable",
+    "bench": "deno bench --unstable"
   },
   "importMap": "./import_map.json"
 }
