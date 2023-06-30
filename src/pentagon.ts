@@ -1,8 +1,7 @@
-import { create, findMany, remove, update } from "./crud.ts";
+import { create, createMany, findMany, remove, update } from "./crud.ts";
 import { PentagonUpdateError } from "./errors.ts";
 import { keysToIndexes, schemaToKeys, whereToKeys } from "./keys.ts";
 import type {
-  CreateAndUpdateResponse,
   PentagonMethods,
   PentagonResult,
   TableDefinition,
@@ -60,10 +59,12 @@ async function createImpl<T extends TableDefinition>(
   tableDefinition: T,
   createArgs: Parameters<PentagonMethods<T>["create"]>[0],
 ): ReturnType<PentagonMethods<T>["create"]> {
-  const keys = schemaToKeys(tableDefinition.schema, createArgs.data);
-  const indexKeys = keysToIndexes(tableName, keys);
-
-  return await create(kv, createArgs.data, indexKeys);
+  return await create(
+    kv,
+    tableName,
+    tableDefinition,
+    createArgs,
+  );
 }
 
 async function createManyImpl<T extends TableDefinition>(
@@ -71,20 +72,13 @@ async function createManyImpl<T extends TableDefinition>(
   tableName: string,
   tableDefinition: T,
   createManyArgs: Parameters<PentagonMethods<T>["createMany"]>[0],
-) {
-  // TODO: this should be in one "atomic" operation, this is not good
-  const createdItems: CreateAndUpdateResponse<T>[] = [];
-  for (let i = 0; i < createManyArgs.data.length; i++) {
-    const createArgs: Parameters<PentagonMethods<T>["create"]>[0] = {
-      select: createManyArgs.select,
-      data: createManyArgs.data[i],
-    };
-
-    createdItems.push(
-      await createImpl(kv, tableName, tableDefinition, createArgs),
-    );
-  }
-  return createdItems;
+): ReturnType<PentagonMethods<T>["createMany"]> {
+  return await createMany(
+    kv,
+    tableName,
+    tableDefinition,
+    createManyArgs,
+  );
 }
 
 async function deleteImpl<T extends TableDefinition>(
