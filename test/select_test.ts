@@ -1,12 +1,13 @@
 import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
 import {
+  clearMocks,
   createMockDatabase,
   populateMockDatabase,
   removeVersionstamp,
 } from "./util.ts";
 
-Deno.test("select", async (t) => {
-  const db = await createMockDatabase();
+Deno.test("select", async () => {
+  const db = createMockDatabase();
   await populateMockDatabase(db);
 
   // Select
@@ -25,4 +26,6 @@ Deno.test("select", async (t) => {
   assertEquals(removeVersionstamp(userWithSelect), {
     id: "67218087-d9a8-4a57-b058-adc01f179ff9",
   });
+
+  await clearMocks();
 });

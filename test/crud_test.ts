@@ -145,5 +145,58 @@ Deno.test("Create / Read / Update / Remove", async (t) => {
     });
   });
 
+  await t.step("updateMany", async () => {
+    await db.users.create({
+      data: {
+        createdAt: new Date(0),
+        id: "139c5467-bb1d-40e5-a977-1f14b9a37dc9",
+        name: "Jane",
+      },
+    });
+
+    await db.users.create({
+      data: {
+        createdAt: new Date(0),
+        id: "bfa592aa-e0c7-466e-8925-2ee2320d3c96",
+        name: "Jane",
+      },
+    });
+
+    const updatedUsers = await db.users.updateMany({
+      where: {
+        name: "Jane",
+      },
+      data: {
+        name: "Jane Updated",
+      },
+    });
+
+    const fetchedUpdatedUsers = await db.users.findMany({
+      where: { name: "Jane Updated" },
+    });
+
+    assertEquals(removeVersionstamp(updatedUsers[0]), {
+      createdAt: new Date(0),
+      id: "139c5467-bb1d-40e5-a977-1f14b9a37dc9",
+      name: "Jane Updated",
+    });
+    assertEquals(removeVersionstamp(updatedUsers[1]), {
+      createdAt: new Date(0),
+      id: "bfa592aa-e0c7-466e-8925-2ee2320d3c96",
+      name: "Jane Updated",
+    });
+
+    assertEquals(removeVersionstamp(fetchedUpdatedUsers[0]), {
+      createdAt: new Date(0),
+      id: "139c5467-bb1d-40e5-a977-1f14b9a37dc9",
+      name: "Jane Updated",
+    });
+    assertEquals(removeVersionstamp(fetchedUpdatedUsers[1]), {
+      createdAt: new Date(0),
+      id: "bfa592aa-e0c7-466e-8925-2ee2320d3c96",
+      name: "Jane Updated",
+    });
+  });
+
   await clearMocks();
 });

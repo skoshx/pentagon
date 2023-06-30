@@ -18,22 +18,6 @@ import {
 } from "./types.ts";
 import { mergeValueAndVersionstamp } from "./util.ts";
 
-function chainAccessKeyCheck(
-  op: Deno.AtomicOperation,
-  key: Deno.KvKey,
-  versionstamp: string | null = null,
-) {
-  return op.check({ key: key, versionstamp });
-}
-
-function chainSet<T>(op: Deno.AtomicOperation, key: Deno.KvKey, item: T) {
-  return op.set(key, item);
-}
-
-function chainDelete<T>(op: Deno.AtomicOperation, key: Deno.KvKey) {
-  return op.delete(key);
-}
-
 export async function listTable<T>(kv: Deno.Kv, tableName: string) {
   const items = new Array<Deno.KvEntry<T>>();
   for await (const item of kv.list<T>({ prefix: [tableName] })) {
@@ -62,8 +46,8 @@ export async function remove(
     res = chainAccessKeyCheck(res, keys[i], null);
   } */
 
-  for (let i = 0; i < keys.length; i++) {
-    res = chainDelete(res, keys[i]);
+  for (const key of keys) {
+    res = res.delete(key);
   }
 
   const commitResult = await res.commit();
@@ -76,37 +60,34 @@ export async function remove(
   throw new PentagonDeleteItemError(`Could not delete item.`);
 }
 
-export async function update<T extends Record<string, DatabaseValue>>(
+export async function update<
+  T extends TableDefinition,
+  Item extends z.output<T["schema"]>,
+>(
   kv: Deno.Kv,
-  items: T[],
-  keys: Deno.KvKey[],
-): Promise<WithVersionstamp<T>[]> {
+  entries: Deno.KvEntry<Item>[],
+): Promise<WithVersionstamp<Item>[]> {
   let res = kv.atomic();
 
-  // Iterate through items
-  for (let i = 0; i < items.length; i++) {
-    // Checks (through keys)
-    for (let j = 0; j < keys.length; j++) {
-      res = chainAccessKeyCheck(
-        res,
-        keys[j],
-        (items[j].versionstamp as string) ?? null,
-      );
-    }
-    // Sets (through keys)
-    for (let j = 0; j < keys.length; j++) {
-      res = chainSet(res, keys[j], items[i]);
-    }
+  // Checks
+  for (const entry of entries) {
+    res = res.check(entry);
+  }
+
+  // Sets
+  for (const { value, key } of entries) {
+    res = res.set(key, value);
   }
 
   const commitResult = await res.commit();
 
   if (commitResult.ok) {
-    return items.map((i) => ({
-      ...i,
+    return entries.map(({ value }) => ({
+      ...value,
       versionstamp: commitResult.versionstamp,
     }));
   }
+
   throw new PentagonCreateItemError(`Could not update item.`);
 }
 
@@ -118,13 +99,13 @@ export async function create<T extends Record<string, DatabaseValue>>(
   let res = kv.atomic();
 
   // Checks
-  for (let i = 0; i < keys.length; i++) {
-    res = chainAccessKeyCheck(res, keys[i]);
+  for (const key of keys) {
+    res = res.check({ key, versionstamp: null });
   }
 
   // Sets
-  for (let i = 0; i < keys.length; i++) {
-    res = chainSet(res, keys[i], item);
+  for (const key of keys) {
+    res = res.set(key, item);
   }
 
   const commitResult = await res.commit();
@@ -155,7 +136,9 @@ export async function findMany<T extends TableDefinition>(
 
   if (queryArgs.include) {
     for (
-      const [relationName, relationValue] of Object.entries(queryArgs.include)
+      const [relationName, relationValue] of Object.entries(
+        queryArgs.include,
+      )
     ) {
       // Relation name
       const relationDefinition = tableDefinition.relations?.[relationName];
