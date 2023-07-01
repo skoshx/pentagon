@@ -119,13 +119,13 @@ export function selectFromEntries<
   select: S,
 ): Deno.KvEntry<Pick<z.output<T["schema"]>, keyof S & string>>[] {
   return items.map((item) => {
-    item.value = Object.keys(select).reduce<Partial<T["schema"]>>(
+    item.value = Object.keys(select).reduce(
       (previous, current) =>
         !isKeyOf(current, item.value) ? previous : {
           ...previous,
           [current]: item.value[current],
         },
-      {},
+      {} as Partial<z.output<T["schema"]>>,
     );
 
     return item;
