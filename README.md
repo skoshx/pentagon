@@ -27,13 +27,13 @@ import { createPentagon } from "https://deno.land/x/pentagon/mod.ts";
 const kv = await Deno.openKv();
 
 export const User = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   name: z.string(),
 });
 
 export const Order = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   name: z.string(),
   userId: z.string().uuid(),
