@@ -1,11 +1,3 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  it,
-} from "https://deno.land/std@0.192.0/testing/bdd.ts";
 import { z } from "../deps.ts";
 import { createPentagon } from "../mod.ts";
 import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
@@ -115,23 +107,21 @@ const clearDatabase = async (kv: Deno.Kv) => {
   for await (const x of kv.list({ prefix: ["posts"] })) {
     await kv.delete(x.key);
   }
+  for await (const x of kv.list({ prefix: ["posts_by_unique_title"] })) {
+    await kv.delete(x.key);
+  }
+  for await (const x of kv.list({ prefix: ["posts_by_category"] })) {
+    await kv.delete(x.key);
+  }
 };
 
-describe("findMany", () => {
-  let kv: Deno.Kv;
-  let db: ReturnType<typeof createDatabase>;
+Deno.test("findMany", async (t) => {
+  const kv = await Deno.openKv();
+  const db = createDatabase(kv);
+  await clearDatabase(kv);
+  await populateDatabase(db);
 
-  beforeAll(async () => {
-    kv = await Deno.openKv();
-    db = createDatabase(kv);
-  });
-
-  beforeEach(async () => {
-    await populateDatabase(db);
-  });
-
-  // Ignored because currently failing
-  it.ignore("should return all posts", async () => {
+  await t.step("should return all posts", async () => {
     const posts = await db.posts.findMany({});
 
     assertEquals(posts.length, 4);
@@ -165,11 +155,6 @@ describe("findMany", () => {
     });
   });
 
-  afterEach(async () => {
-    await clearDatabase(kv);
-  });
-
-  afterAll(() => {
-    kv.close();
-  });
+  await clearDatabase(kv);
+  kv.close();
 });
