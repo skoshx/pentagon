@@ -66,6 +66,7 @@ export function createMockDatabase() {
       schema: User,
       relations: {
         myOrders: ["orders", [Order], "id", "userId"],
+        myPosts: ["posts", [Post], "id", "userId"],
       },
     },
     orders: {
@@ -74,18 +75,12 @@ export function createMockDatabase() {
         user: ["users", User, "userId", "id"],
       },
     },
-    /* posts: {
+    posts: {
       schema: Post,
       relations: {
-        categories: ["categories", [Category], undefined, undefined]
-      }
+        user: ["users", User, "userId", "id"],
+      },
     },
-    categories: {
-      schema: Category,
-      relations: {
-        posts: ["posts", [Post], undefined, undefined]
-      }
-    } */
   });
 }
 
