@@ -39,17 +39,31 @@ Deno.bench("findFirst > where", async () => {
     where: {
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
     },
+    include: {
+      myOrders: true,
+    },
   });
 });
 
 Deno.bench("findMany", async () => {
-  await db.users.findMany({});
+  await db.orders.findMany({});
 });
 
 Deno.bench("findMany > where", async () => {
-  await db.users.findMany({
+  await db.orders.findMany({
     where: {
       name: "Double Cheeseburger",
+    },
+  });
+});
+
+Deno.bench("findMany > where & include", async () => {
+  await db.orders.findMany({
+    where: {
+      name: "Double Cheeseburger",
+    },
+    include: {
+      user: true,
     },
   });
 });
