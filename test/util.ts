@@ -26,22 +26,6 @@ export const Category = z.object({
   name: z.string(),
 });
 
-export function removeVersionstamps<T = unknown>(items: Deno.KvEntry<T>[]) {
-  return items.map((item) => {
-    const { versionstamp: _versionstamp, ...rest } = item;
-    return rest;
-  });
-}
-
-export function removeVersionstamp<
-  T extends { versionstamp?: string | null | undefined },
->(
-  item: T,
-): Omit<T, "versionstamp"> {
-  const { versionstamp: _versionstamp, ...rest } = item;
-  return rest;
-}
-
 export const kv = await Deno.openKv();
 
 /*

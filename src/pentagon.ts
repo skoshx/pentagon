@@ -1,6 +1,6 @@
 import { create, createMany, findMany, remove, update } from "./crud.ts";
 import { PentagonUpdateError } from "./errors.ts";
-import { keysToIndexes, schemaToKeys, whereToKeys } from "./keys.ts";
+import { keysToItems, schemaToKeys } from "./keys.ts";
 import type {
   PentagonMethods,
   PentagonResult,
@@ -92,15 +92,14 @@ async function deleteImpl<T extends TableDefinition>(
     tableDefinition.schema,
     queryArgs.where ?? [],
   );
-  const indexKeys = keysToIndexes(tableName, keys);
-  const foundItems = await whereToKeys(
+  const items = await keysToItems(
     kv,
     tableName,
-    indexKeys,
+    keys,
     queryArgs.where ?? {},
   );
   // @ts-ignore TODO: delete should not use QueryArgs or QueryResponse
-  return await remove(kv, foundItems.map((i) => i.key));
+  return await remove(kv, items.map((i) => i.key));
 }
 
 async function deleteManyImpl<T extends TableDefinition>(
@@ -114,15 +113,15 @@ async function deleteManyImpl<T extends TableDefinition>(
     tableDefinition.schema,
     queryArgs.where ?? [],
   );
-  const indexKeys = keysToIndexes(tableName, keys);
-  const foundItems = await whereToKeys(
+  const items = await keysToItems(
     kv,
     tableName,
-    indexKeys,
+    keys,
     queryArgs.where ?? {},
   );
+
   // @ts-ignore TODO: deleteMany should not use QueryArgs or QueryResponse
-  return await remove(kv, foundItems.map((i) => i.key));
+  return await remove(kv, items.map((i) => i.key));
 }
 
 async function updateManyImpl<T extends TableDefinition>(
@@ -136,21 +135,20 @@ async function updateManyImpl<T extends TableDefinition>(
     tableDefinition.schema,
     updateArgs.where ?? [],
   );
-  const indexKeys = keysToIndexes(tableName, keys);
-  const foundItems = await whereToKeys(
+  const items = await keysToItems(
     kv,
     tableName,
-    indexKeys,
+    keys,
     updateArgs.where ?? {},
   );
 
-  if (foundItems.length === 0) {
+  if (items.length === 0) {
     // @todo: should we throw?
     throw new PentagonUpdateError(`Updating zero elements.`);
   }
 
   try {
-    const updatedItems = foundItems
+    const updatedItems = items
       .map((existingItem) => ({
         key: existingItem.key,
         value: tableDefinition.schema.parse({

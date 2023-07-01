@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
-import { clearMocks, createMockDatabase, removeVersionstamp } from "./util.ts";
+import { clearMocks, createMockDatabase } from "./util.ts";
+import { removeVersionstamp } from "../src/util.ts";
 
 Deno.test("include", async (t) => {
   const db = createMockDatabase();

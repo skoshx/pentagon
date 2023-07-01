@@ -7,11 +7,11 @@ import {
   clearMocks,
   createMockDatabase,
   populateMockDatabase,
-  removeVersionstamp,
   User,
 } from "./util.ts";
 import { z } from "../deps.ts";
 import { getKvInstance } from "../mod.ts";
+import { removeVersionstamp } from "../src/util.ts";
 
 Deno.test("Create / Read / Update / Remove", async (t) => {
   const db = await createMockDatabase();

@@ -3,8 +3,8 @@ import {
   clearMocks,
   createMockDatabase,
   populateMockDatabase,
-  removeVersionstamp,
 } from "./util.ts";
+import { removeVersionstamp } from "../src/util.ts";
 
 Deno.test("select", async () => {
   const db = createMockDatabase();
