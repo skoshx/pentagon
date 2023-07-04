@@ -1,7 +1,4 @@
 // @todo: make sure values confine to the limitations of the
-
-import { WithMaybeVersionstamp, WithVersionstamp } from "../mod.ts";
-
 // `structuralClone` algorithm.
 export function isValidDatabaseValue() {}
 
