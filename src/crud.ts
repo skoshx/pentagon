@@ -107,11 +107,8 @@ function createOne<T extends TableDefinition>(
     switch (accessKey.type) {
       case "primary":
       case "unique":
-        res = res.check({ key: denoKey, versionstamp: null }).set(
-          denoKey,
-          item,
-        );
-        break;
+        res = res.check({ key: denoKey, versionstamp: null });
+        /* falls through */
       case "index":
         res = res.set(denoKey, item);
         break;
