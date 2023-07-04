@@ -197,12 +197,15 @@ export type QueryArgs<T extends TableDefinition> = {
   kvOptions?: QueryKvOptions;
 };
 
-export type AccessKey = {
-  primary?: true;
-  suffix?: string; // eg. "_by_email"
-  unique?: true;
-  value: Deno.KvKeyPart;
-};
+export type AccessKey =
+  & {
+    value: Deno.KvKeyPart;
+  }
+  & (
+    | { type: "primary" }
+    | { type: "index"; suffix: string }
+    | { type: "unique"; suffix: string }
+  );
 
 export type KeyProperty = z.infer<typeof KeyPropertySchema>;
 

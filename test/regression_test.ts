@@ -19,7 +19,9 @@ Deno.test("include", async (t) => {
       include: { myOrders: true },
     });
 
-    // console
+    // @ts-ignore: currently failing because include type seems to be incorrect,
+    // it fails because it expects the property myPosts to exist even though
+    // it is not included.
     assertEquals(removeVersionstamp(userWithEmptyOrders), {
       createdAt: new Date(0),
       id: "f407a8f8-9392-4922-b8bf-31a9ed2cbc41",

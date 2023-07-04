@@ -87,7 +87,11 @@ async function deleteImpl<T extends TableDefinition>(
   tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["delete"]>[0],
 ) {
-  const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
+  const keys = schemaToKeys(
+    tableName,
+    tableDefinition.schema,
+    queryArgs.where ?? [],
+  );
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
     kv,
@@ -105,7 +109,11 @@ async function deleteManyImpl<T extends TableDefinition>(
   tableDefinition: T,
   queryArgs: Parameters<PentagonMethods<T>["deleteMany"]>[0],
 ) {
-  const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
+  const keys = schemaToKeys(
+    tableName,
+    tableDefinition.schema,
+    queryArgs.where ?? [],
+  );
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
     kv,
@@ -123,7 +131,11 @@ async function updateManyImpl<T extends TableDefinition>(
   tableDefinition: T,
   updateArgs: Parameters<PentagonMethods<T>["updateMany"]>[0],
 ): ReturnType<PentagonMethods<T>["updateMany"]> {
-  const keys = schemaToKeys(tableDefinition.schema, updateArgs.where ?? []);
+  const keys = schemaToKeys(
+    tableName,
+    tableDefinition.schema,
+    updateArgs.where ?? [],
+  );
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
     kv,

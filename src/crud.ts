@@ -100,7 +100,7 @@ export async function create<T extends TableDefinition>(
   createArgs: CreateArgs<T>,
 ): Promise<WithVersionstamp<z.output<T["schema"]>>> {
   let res = kv.atomic();
-  const keys = schemaToKeys(tableDefinition.schema, createArgs.data);
+  const keys = schemaToKeys(tableName, tableDefinition.schema, createArgs.data);
   const indexKeys = keysToIndexes(tableName, keys);
   const item: z.output<T["schema"]> = tableDefinition.schema.parse(
     createArgs.data,
@@ -132,7 +132,7 @@ export async function createMany<T extends TableDefinition>(
   const items: z.output<T["schema"]>[] = [];
 
   for (const data of createManyArgs.data) {
-    const keys = schemaToKeys(tableDefinition.schema, data);
+    const keys = schemaToKeys(tableName, tableDefinition.schema, data);
     const indexKeys = keysToIndexes(tableName, keys);
     const item: z.output<T["schema"]> = tableDefinition.schema.parse(data);
 
@@ -161,7 +161,11 @@ export async function findMany<T extends TableDefinition>(
   tableDefinition: T,
   queryArgs: QueryArgs<T>,
 ) {
-  const keys = schemaToKeys(tableDefinition.schema, queryArgs.where ?? []);
+  const keys = schemaToKeys(
+    tableName,
+    tableDefinition.schema,
+    queryArgs.where ?? [],
+  );
   const indexKeys = keysToIndexes(tableName, keys);
   const foundItems = await whereToKeys(
     kv,
@@ -172,9 +176,7 @@ export async function findMany<T extends TableDefinition>(
 
   if (queryArgs.include) {
     for (
-      const [relationName, relationValue] of Object.entries(
-        queryArgs.include,
-      )
+      const [relationName, relationValue] of Object.entries(queryArgs.include)
     ) {
       // Relation name
       const relationDefinition = tableDefinition.relations?.[relationName];

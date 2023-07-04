@@ -2,26 +2,26 @@ import { z } from "../deps.ts";
 import { createPentagon } from "../src/pentagon.ts";
 
 export const User = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   name: z.string(),
 });
 
 export const Order = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   name: z.string(),
   userId: z.string().uuid(),
 });
 
 export const Post = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   title: z.string(),
 });
 
 export const Category = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   name: z.string(),
 });
@@ -66,6 +66,7 @@ export function createMockDatabase() {
       schema: User,
       relations: {
         myOrders: ["orders", [Order], "id", "userId"],
+        myPosts: ["posts", [Post], "id", "userId"],
       },
     },
     orders: {
@@ -74,18 +75,12 @@ export function createMockDatabase() {
         user: ["users", User, "userId", "id"],
       },
     },
-    /* posts: {
+    posts: {
       schema: Post,
       relations: {
-        categories: ["categories", [Category], undefined, undefined]
-      }
+        user: ["users", User, "userId", "id"],
+      },
     },
-    categories: {
-      schema: Category,
-      relations: {
-        posts: ["posts", [Post], undefined, undefined]
-      }
-    } */
   });
 }
 
