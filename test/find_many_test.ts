@@ -155,8 +155,8 @@ Deno.test("findMany", async (t) => {
     });
   });
 
+  // @todo: currently failing because of issue #24
   await t.step({
-    ignore: true, // Currently failing because of issue #24
     name: "should not return duplicate posts",
     fn: async () => {
       const posts = await db.posts.findMany({
