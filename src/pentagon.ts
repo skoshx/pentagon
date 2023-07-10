@@ -117,7 +117,7 @@ async function deleteManyImpl<T extends TableDefinition>(
     kv,
     tableName,
     keys,
-    queryArgs.where ?? {},
+    queryArgs.where,
   );
 
   // @ts-ignore TODO: deleteMany should not use QueryArgs or QueryResponse
@@ -139,7 +139,7 @@ async function updateManyImpl<T extends TableDefinition>(
     kv,
     tableName,
     keys,
-    updateArgs.where ?? {},
+    updateArgs.where,
   );
 
   if (items.length === 0) {

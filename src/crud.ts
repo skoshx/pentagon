@@ -188,7 +188,7 @@ export async function findMany<T extends TableDefinition>(
   const foundItems = await keysToItems(
     kv,
     tableName,
-    keys,
+    keys.length > 0 ? [keys[0]] : [],
     queryArgs.where ?? {},
   );
 

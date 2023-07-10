@@ -43,7 +43,7 @@ Deno.test("schemaToKeys", () => {
         suffix: "_by_unique_email",
         value: "john.doe@proton.me",
       },
-      denoKey: ["users_by_unique_email", "john.doe@proton.me"],
+      denoKey: ["users", "users_by_unique_email", "john.doe@proton.me"],
     }],
   );
 
@@ -70,6 +70,7 @@ Deno.test("schemaToKeys", () => {
         suffix: "_by_color",
       },
       denoKey: [
+        "users",
         "users_by_color",
         "blue",
         "73a85d83-7325-46f0-a421-1bfac4cec68a",

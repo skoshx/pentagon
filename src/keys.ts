@@ -9,7 +9,7 @@ import {
   QueryArgs,
   TableDefinition,
 } from "./types.ts";
-import { isKeyOf, removeVersionstamp } from "./util.ts";
+import { isKeyOf } from "./util.ts";
 
 export const KeyPropertySchema = z.enum(["primary", "unique", "index"]);
 
@@ -37,7 +37,9 @@ export function parseKeyProperties(
 
   if (parsedProperties.length > 1) {
     throw new Error(
-      `Table '${tableName}' can't have more than one type of index for property ${property}`,
+      `Table "${tableName}" can't have more than one type of index for property "${property}". You are using indexes ${
+        parsedProperties.map((p) => `"${p}"`).join(" and ")
+      }. Use only one of the index values "primary", "unique" or "index".`,
     );
   }
 
@@ -72,7 +74,7 @@ export function schemaToAccessKeys<T extends ReturnType<typeof z.object>>(
     (current, [key, value]) => {
       const inputValue = values[key];
 
-      if (!value.description || !inputValue) {
+      if (!value.description || inputValue === undefined) {
         return current;
       }
 
@@ -80,7 +82,10 @@ export function schemaToAccessKeys<T extends ReturnType<typeof z.object>>(
 
       switch (keyType) {
         case "primary":
-          current.push({ value: inputValue, type: "primary" });
+          current.push({
+            value: inputValue,
+            type: "primary",
+          });
           break;
         case "unique":
           current.push({
@@ -106,7 +111,9 @@ export function schemaToAccessKeys<T extends ReturnType<typeof z.object>>(
   const primaryKeys = accessKeys.filter(({ type }) => type === "primary");
 
   if (primaryKeys.length > 1) {
-    throw new Error(`Table ${tableName} Can't have more than one primary key`);
+    throw new Error(
+      `Table "${tableName}" can't have more than one primary key`,
+    );
   }
 
   return accessKeys;
@@ -131,18 +138,18 @@ function keysToIndexes(
 
     // Unique indexed key
     if (accessKey.type === "unique") {
-      return [`${tableName}${accessKey.suffix}`, accessKey.value];
+      return [tableName, `${tableName}${accessKey.suffix}`, accessKey.value];
     }
 
     // Non-unique indexed key
     if (accessKey.type === "index") {
       if (!primaryKey) {
         throw new Error(
-          `Table '${tableName}' can't use a non-unique index without a primary index`,
+          `Table "${tableName}" can't use a non-unique index without a primary index`,
         );
       }
-
       return [
+        tableName,
         `${tableName}${accessKey.suffix}`,
         accessKey.value,
         primaryKey.value,
@@ -166,7 +173,6 @@ export async function keysToItems<
     : await listTable<T>(kv, tableName);
 
   // Sort using `where`
-
   return filterEntries(entries, where);
 }
 
