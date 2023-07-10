@@ -1,17 +1,13 @@
 // CRUD operations
 import { z } from "../deps.ts";
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
-import {
-  keysToIndexes,
-  schemaToKeys,
-  selectFromEntries,
-  whereToKeys,
-} from "./keys.ts";
+import { keysToItems, schemaToKeys, selectFromEntries } from "./keys.ts";
 import { isToManyRelation } from "./relation.ts";
 import {
   CreateArgs,
   CreateManyArgs,
   DatabaseValue,
+  PentagonKey,
   QueryArgs,
   QueryKvOptions,
   TableDefinition,
@@ -20,21 +16,30 @@ import {
 } from "./types.ts";
 import { mergeValueAndVersionstamp } from "./util.ts";
 
-export async function listTable<T>(kv: Deno.Kv, tableName: string) {
-  const items = new Array<Deno.KvEntry<T>>();
-  for await (const item of kv.list<T>({ prefix: [tableName] })) {
+export async function listTable<T extends TableDefinition>(
+  kv: Deno.Kv,
+  tableName: string,
+) {
+  const items: Deno.KvEntry<z.output<T["schema"]>>[] = [];
+
+  for await (
+    const item of kv.list<z.output<T["schema"]>>({ prefix: [tableName] })
+  ) {
     items.push(item);
   }
+
   return items;
 }
 
-export async function read<T extends readonly unknown[]>(
+export async function read<T extends TableDefinition>(
   kv: Deno.Kv,
-  keys: readonly [...{ [K in keyof T]: Deno.KvKey }],
+  keys: PentagonKey[],
   kvOptions?: QueryKvOptions,
 ) {
-  const res = await kv.getMany<T>(keys, kvOptions);
-  return res;
+  return await kv.getMany<z.output<T["schema"]>[]>(
+    keys.map(({ denoKey }) => denoKey),
+    kvOptions,
+  );
 }
 
 export async function remove(
@@ -93,22 +98,39 @@ export async function update<
   throw new PentagonCreateItemError(`Could not update item.`);
 }
 
+function createOne<T extends TableDefinition>(
+  res: Deno.AtomicOperation,
+  item: z.output<T["schema"]>,
+  keys: PentagonKey[],
+) {
+  for (const { accessKey, denoKey } of keys) {
+    switch (accessKey.type) {
+      case "primary":
+      case "unique":
+        res = res.check({ key: denoKey, versionstamp: null });
+        /* falls through */
+      case "index":
+        res = res.set(denoKey, item);
+        break;
+      default:
+        throw new Error(`Unknown index key ${denoKey}`);
+    }
+  }
+}
+
 export async function create<T extends TableDefinition>(
   kv: Deno.Kv,
   tableName: string,
   tableDefinition: T,
   createArgs: CreateArgs<T>,
 ): Promise<WithVersionstamp<z.output<T["schema"]>>> {
-  let res = kv.atomic();
+  const res = kv.atomic();
   const keys = schemaToKeys(tableName, tableDefinition.schema, createArgs.data);
-  const indexKeys = keysToIndexes(tableName, keys);
   const item: z.output<T["schema"]> = tableDefinition.schema.parse(
     createArgs.data,
   );
 
-  for (const key of indexKeys) {
-    res = res.check({ key, versionstamp: null }).set(key, item); // TODO: Currently checks ALL keys, should only check unique ones
-  }
+  createOne(res, item, keys);
 
   const commitResult = await res.commit();
 
@@ -128,17 +150,14 @@ export async function createMany<T extends TableDefinition>(
   tableDefinition: T,
   createManyArgs: CreateManyArgs<T>,
 ): Promise<WithVersionstamp<z.output<T["schema"]>>[]> {
-  let res = kv.atomic();
+  const res = kv.atomic();
   const items: z.output<T["schema"]>[] = [];
 
   for (const data of createManyArgs.data) {
     const keys = schemaToKeys(tableName, tableDefinition.schema, data);
-    const indexKeys = keysToIndexes(tableName, keys);
     const item: z.output<T["schema"]> = tableDefinition.schema.parse(data);
 
-    for (const key of indexKeys) {
-      res = res.check({ key, versionstamp: null }).set(key, item); // TODO: Currently checks ALL keys, should only check unique ones
-    }
+    createOne(res, item, keys);
 
     items.push(item);
   }
@@ -166,11 +185,10 @@ export async function findMany<T extends TableDefinition>(
     tableDefinition.schema,
     queryArgs.where ?? [],
   );
-  const indexKeys = keysToIndexes(tableName, keys);
-  const foundItems = await whereToKeys(
+  const foundItems = await keysToItems(
     kv,
     tableName,
-    indexKeys,
+    keys,
     queryArgs.where ?? {},
   );
 
@@ -182,7 +200,7 @@ export async function findMany<T extends TableDefinition>(
       const relationDefinition = tableDefinition.relations?.[relationName];
       if (!relationDefinition) {
         throw new Error(
-          `No relation found for relation name "${relationName}", make sure it's ∂efined in your Pentagon configuration.`,
+          `No relation found for relation name "${relationName}", make sure it's defined in your Pentagon configuration.`,
         );
       }
       const tableName = relationDefinition[0];

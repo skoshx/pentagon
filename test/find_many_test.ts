@@ -1,7 +1,7 @@
 import { z } from "../deps.ts";
 import { createPentagon } from "../mod.ts";
 import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
-import { removeVersionstamp } from "./util.ts";
+import { removeVersionstamp } from "../src/util.ts";
 
 const User = z.object({
   id: z.string().uuid().describe("primary"),

@@ -67,7 +67,7 @@ export type WithVersionstamp<T> = T & {
   versionstamp: string;
 };
 export type WithMaybeVersionstamp<T> = T & {
-  versionstamp: string | null | undefined;
+  versionstamp?: string | null | undefined;
 };
 
 export type LocalKey = string;
@@ -187,13 +187,13 @@ type Includable<T> = T extends Record<string, unknown>
   : never;
 
 export type QueryArgs<T extends TableDefinition> = {
-  where?: Partial<WithMaybeVersionstamp<z.infer<T["schema"]>>>;
+  where?: Partial<WithMaybeVersionstamp<z.output<T["schema"]>>>;
   take?: number;
   skip?: number;
-  select?: Partial<Record<keyof z.infer<T["schema"]>, true>>;
-  orderBy?: Partial<z.infer<T["schema"]>>;
+  select?: Partial<Record<keyof z.output<T["schema"]>, true>>;
+  orderBy?: Partial<z.output<T["schema"]>>;
   include?: IncludeDetails<T["relations"]>;
-  distinct?: Array<keyof z.infer<T["schema"]>>;
+  distinct?: Array<keyof z.output<T["schema"]>>;
   kvOptions?: QueryKvOptions;
 };
 
@@ -206,6 +206,11 @@ export type AccessKey =
     | { type: "index"; suffix: string }
     | { type: "unique"; suffix: string }
   );
+
+export type PentagonKey = {
+  accessKey: AccessKey;
+  denoKey: Deno.KvKey;
+};
 
 export type KeyProperty = z.infer<typeof KeyPropertySchema>;
 

@@ -1,10 +1,15 @@
 import { z } from "../deps.ts";
-import { removeVersionstamp } from "../test/util.ts";
 import { listTable, read } from "./crud.ts";
 import { PentagonKeyError } from "./errors.ts";
-import { findItemsBySearch } from "./search.ts";
-import { AccessKey, KeyProperty, QueryArgs, TableDefinition } from "./types.ts";
-import { isKeyOf } from "./util.ts";
+import { filterEntries } from "./search.ts";
+import {
+  AccessKey,
+  KeyProperty,
+  PentagonKey,
+  QueryArgs,
+  TableDefinition,
+} from "./types.ts";
+import { isKeyOf, removeVersionstamp } from "./util.ts";
 
 export const KeyPropertySchema = z.enum(["primary", "unique", "index"]);
 
@@ -40,6 +45,25 @@ export function parseKeyProperties(
 }
 
 export function schemaToKeys<T extends ReturnType<typeof z.object>>(
+  tableName: string,
+  schema: T,
+  values: Partial<z.input<T>>,
+): PentagonKey[] {
+  const accessKeys = schemaToAccessKeys(tableName, schema, values);
+  const denoKeys = keysToIndexes(tableName, accessKeys);
+  const pentagonKeys: PentagonKey[] = [];
+
+  for (let i = 0; i < accessKeys.length; i++) {
+    pentagonKeys.push({
+      accessKey: accessKeys[i],
+      denoKey: denoKeys[i],
+    });
+  }
+
+  return pentagonKeys;
+}
+
+export function schemaToAccessKeys<T extends ReturnType<typeof z.object>>(
   tableName: string,
   schema: T,
   values: Partial<z.input<T>>,
@@ -93,7 +117,7 @@ export function schemaToKeys<T extends ReturnType<typeof z.object>>(
  * @param tableName Name of the "table" (eg. "users")
  * @param accessKeys The `AccessKey[]` returned by `schemaToKeys()`
  */
-export function keysToIndexes(
+function keysToIndexes(
   tableName: string,
   accessKeys: AccessKey[],
 ): Deno.KvKey[] {
@@ -129,27 +153,21 @@ export function keysToIndexes(
   });
 }
 
-export async function whereToKeys<
+export async function keysToItems<
   T extends TableDefinition,
-  IndexKeys extends readonly unknown[],
 >(
   kv: Deno.Kv,
   tableName: string,
-  indexKeys: readonly [...{ [K in keyof IndexKeys]: Deno.KvKey }],
+  keys: PentagonKey[],
   where: QueryArgs<T>["where"],
 ) {
-  const schemaItems = indexKeys.length > 0
-    ? await read(kv, indexKeys)
-    : await listTable(kv, tableName);
+  const entries = keys.length > 0
+    ? await read<T>(kv, keys)
+    : await listTable<T>(kv, tableName);
 
   // Sort using `where`
 
-  // the cast to Deno.KvEntry here is unsafe
-  // consider what happens when read does not return a match
-  return findItemsBySearch(
-    schemaItems as Deno.KvEntry<z.output<T["schema"]>>[],
-    where && removeVersionstamp(where),
-  );
+  return filterEntries(entries, where);
 }
 
 export function selectFromEntries<
