@@ -1,5 +1,5 @@
 import { z } from "../deps.ts";
-import { listTable, read } from "./crud.ts";
+import { listTableWithIndexPrefixes, read } from "./crud.ts";
 import { PentagonKeyError } from "./errors.ts";
 import { filterEntries } from "./search.ts";
 import {
@@ -138,7 +138,7 @@ function keysToIndexes(
 
     // Unique indexed key
     if (accessKey.type === "unique") {
-      return [tableName, `${tableName}${accessKey.suffix}`, accessKey.value];
+      return [`${tableName}${accessKey.suffix}`, accessKey.value];
     }
 
     // Non-unique indexed key
@@ -149,7 +149,6 @@ function keysToIndexes(
         );
       }
       return [
-        tableName,
         `${tableName}${accessKey.suffix}`,
         accessKey.value,
         primaryKey.value,
@@ -167,10 +166,11 @@ export async function keysToItems<
   tableName: string,
   keys: PentagonKey[],
   where: QueryArgs<T>["where"],
+  indexPrefixes: Deno.KvKey,
 ) {
   const entries = keys.length > 0
     ? await read<T>(kv, keys)
-    : await listTable<T>(kv, tableName);
+    : await listTableWithIndexPrefixes(kv, ...indexPrefixes);
 
   // Sort using `where`
   return filterEntries(entries, where);
@@ -196,4 +196,39 @@ export function selectFromEntries<
 
     return item;
   });
+}
+
+export function getIndexPrefixes<T extends ReturnType<typeof z.object>>(
+  tableName: string,
+  schema: T,
+): Deno.KvKey {
+  const indexPrefixes = Object.entries(schema.shape).reduce(
+    (current, [indexKey, indexValue]) => {
+      if (!indexValue.description) {
+        return current;
+      }
+
+      const keyType = parseKeyProperties(
+        tableName,
+        indexKey,
+        indexValue.description,
+      );
+
+      switch (keyType) {
+        case "primary":
+          current.push(tableName);
+          break;
+        case "unique":
+          current.push(`${tableName}_by_unique_${indexKey}`);
+          break;
+        case "index":
+          current.push(`${tableName}_by_${indexKey}`);
+          break;
+      }
+
+      return current;
+    },
+    [] as string[],
+  );
+  return indexPrefixes;
 }

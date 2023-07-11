@@ -171,7 +171,7 @@ Deno.test("regression #26 (correct keys)", () => {
         value: mockUser.nickname,
         suffix: "_by_unique_nickname",
       },
-      denoKey: ["users", "users_by_unique_nickname", mockUser.nickname],
+      denoKey: ["users_by_unique_nickname", mockUser.nickname],
     },
   ]);
 });

@@ -7,7 +7,12 @@ import {
   User,
 } from "./util.ts";
 import { z } from "../deps.ts";
-import { keysToItems, schemaToKeys, selectFromEntries } from "../src/keys.ts";
+import {
+  getIndexPrefixes,
+  keysToItems,
+  schemaToKeys,
+  selectFromEntries,
+} from "../src/keys.ts";
 import { removeVersionstamps } from "../src/util.ts";
 
 Deno.test("schemaToKeys", () => {
@@ -43,7 +48,7 @@ Deno.test("schemaToKeys", () => {
         suffix: "_by_unique_email",
         value: "john.doe@proton.me",
       },
-      denoKey: ["users", "users_by_unique_email", "john.doe@proton.me"],
+      denoKey: ["users_by_unique_email", "john.doe@proton.me"],
     }],
   );
 
@@ -70,7 +75,6 @@ Deno.test("schemaToKeys", () => {
         suffix: "_by_color",
       },
       denoKey: [
-        "users",
         "users_by_color",
         "blue",
         "73a85d83-7325-46f0-a421-1bfac4cec68a",
@@ -89,7 +93,13 @@ Deno.test("whereToKeys", async (t) => {
       id: "67218087-d9a8-4a57-b058-adc01f179ff9",
     };
     const keys = schemaToKeys("users", User, whereQuery);
-    const foundItems = await keysToItems(kv, "users", keys, whereQuery);
+    const foundItems = await keysToItems(
+      kv,
+      "users",
+      keys,
+      whereQuery,
+      getIndexPrefixes("users", User),
+    );
     assertEquals(removeVersionstamps(foundItems), [
       {
         key: [
@@ -110,7 +120,13 @@ Deno.test("whereToKeys", async (t) => {
       name: "John Doe",
     };
     const keys = schemaToKeys("users", User, whereQuery);
-    const foundItems = await keysToItems(kv, "users", keys, whereQuery);
+    const foundItems = await keysToItems(
+      kv,
+      "users",
+      keys,
+      whereQuery,
+      getIndexPrefixes("users", User),
+    );
     assertEquals(removeVersionstamps(foundItems), [
       {
         key: [
@@ -131,7 +147,13 @@ Deno.test("whereToKeys", async (t) => {
       id: "nonexistent",
     };
     const keys = schemaToKeys("users", User, whereQuery);
-    const foundItems = await keysToItems(kv, "users", keys, whereQuery);
+    const foundItems = await keysToItems(
+      kv,
+      "users",
+      keys,
+      whereQuery,
+      getIndexPrefixes("users", User),
+    );
     assertEquals(foundItems, []);
   });
 });
@@ -165,4 +187,22 @@ Deno.test("selectFromEntries", () => {
       versionstamp: "00000000000",
     },
   ]);
+});
+
+Deno.test("getIndexPrefixes", () => {
+  const UserWithMultipleIndexes = z.object({
+    // note: the below is redundant, we can only have max one index
+    // and primary is already a unique index.
+    // id: z.number().describe("primary, unique"),
+    id: z.number().describe("primary"),
+    firstName: z.string(),
+    lastName: z.string().optional(),
+    nickname: z.string().describe("unique"),
+    createdAt: z.date(),
+    updatedAt: z.date().nullable(),
+  });
+
+  const indexPrefixes = getIndexPrefixes("users", UserWithMultipleIndexes);
+
+  assertEquals(indexPrefixes, ["users", "users_by_unique_nickname"]);
 });

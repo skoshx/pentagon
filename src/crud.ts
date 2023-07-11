@@ -1,7 +1,12 @@
 // CRUD operations
 import { z } from "../deps.ts";
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
-import { keysToItems, schemaToKeys, selectFromEntries } from "./keys.ts";
+import {
+  getIndexPrefixes,
+  keysToItems,
+  schemaToKeys,
+  selectFromEntries,
+} from "./keys.ts";
 import { isToManyRelation } from "./relation.ts";
 import {
   CreateArgs,
@@ -26,6 +31,23 @@ export async function listTable<T extends TableDefinition>(
     const item of kv.list<z.output<T["schema"]>>({ prefix: [tableName] })
   ) {
     items.push(item);
+  }
+
+  return items;
+}
+
+export async function listTableWithIndexPrefixes<T extends TableDefinition>(
+  kv: Deno.Kv,
+  ...prefixes: Deno.KvKeyPart[]
+) {
+  const items: Deno.KvEntry<z.output<T["schema"]>>[] = [];
+
+  for (let i = 0; i < prefixes.length; i++) {
+    for await (
+      const item of kv.list<z.output<T["schema"]>>({ prefix: [prefixes[i]] })
+    ) {
+      items.push(item);
+    }
   }
 
   return items;
@@ -185,11 +207,13 @@ export async function findMany<T extends TableDefinition>(
     tableDefinition.schema,
     queryArgs.where ?? [],
   );
+  const indexPrefixes = getIndexPrefixes(tableName, tableDefinition.schema);
   const foundItems = await keysToItems(
     kv,
     tableName,
     keys.length > 0 ? [keys[0]] : [],
     queryArgs.where ?? {},
+    indexPrefixes.length > 0 ? [indexPrefixes[0]] : [],
   );
 
   if (queryArgs.include) {

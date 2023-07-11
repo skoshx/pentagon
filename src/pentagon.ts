@@ -1,6 +1,6 @@
 import { create, createMany, findMany, remove, update } from "./crud.ts";
 import { PentagonUpdateError } from "./errors.ts";
-import { keysToItems, schemaToKeys } from "./keys.ts";
+import { getIndexPrefixes, keysToItems, schemaToKeys } from "./keys.ts";
 import type {
   PentagonMethods,
   PentagonResult,
@@ -97,6 +97,7 @@ async function deleteImpl<T extends TableDefinition>(
     tableName,
     keys,
     queryArgs.where ?? {},
+    getIndexPrefixes(tableName, tableDefinition.schema),
   );
   // @ts-ignore TODO: delete should not use QueryArgs or QueryResponse
   return await remove(kv, items.map((i) => i.key));
@@ -118,6 +119,7 @@ async function deleteManyImpl<T extends TableDefinition>(
     tableName,
     keys,
     queryArgs.where,
+    getIndexPrefixes(tableName, tableDefinition.schema),
   );
 
   // @ts-ignore TODO: deleteMany should not use QueryArgs or QueryResponse
@@ -140,6 +142,7 @@ async function updateManyImpl<T extends TableDefinition>(
     tableName,
     keys,
     updateArgs.where,
+    getIndexPrefixes(tableName, tableDefinition.schema),
   );
 
   if (items.length === 0) {
