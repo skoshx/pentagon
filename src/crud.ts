@@ -1,5 +1,6 @@
 // CRUD operations
 import { z } from "../deps.ts";
+import { batchOperations } from "./batchOperations.ts";
 import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
 import {
   getIndexPrefixes,
@@ -11,7 +12,6 @@ import { isToManyRelation } from "./relation.ts";
 import {
   CreateArgs,
   CreateManyArgs,
-  DatabaseValue,
   PentagonKey,
   QueryArgs,
   QueryKvOptions,
@@ -67,26 +67,8 @@ export async function read<T extends TableDefinition>(
 export async function remove(
   kv: Deno.Kv,
   keys: Deno.KvKey[],
-): Promise<WithVersionstamp<Record<string, DatabaseValue>>> {
-  let res = kv.atomic();
-
-  // @todo: do we need these checks here for delete ops?
-  /* for (let i = 0; i < keys.length; i++) {
-    res = chainAccessKeyCheck(res, keys[i], null);
-  } */
-
-  for (const key of keys) {
-    res = res.delete(key);
-  }
-
-  const commitResult = await res.commit();
-
-  if (commitResult.ok) {
-    return {
-      versionstamp: commitResult.versionstamp,
-    };
-  }
-  throw new PentagonDeleteItemError(`Could not delete item.`);
+) {
+  await batchOperations(kv, "delete", keys);
 }
 
 export async function update<

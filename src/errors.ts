@@ -21,3 +21,9 @@ export class PentagonUpdateError extends Error {
     super(message, { cause });
   }
 }
+
+export class PentagonBatchOpError extends Error {
+  constructor(message: string, cause?: string) {
+    super(message, { cause });
+  }
+}

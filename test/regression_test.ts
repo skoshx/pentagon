@@ -175,3 +175,23 @@ Deno.test("regression #26 (correct keys)", () => {
     },
   ]);
 });
+
+Deno.test("regression #28", async () => {
+  const db = createMockDatabase();
+  await clearMocks();
+
+  // create 100 users
+  for (let i = 0; i < 100; i++) {
+    await db.users.create({
+      data: {
+        createdAt: new Date(0),
+        id: crypto.randomUUID(),
+        name: `User ${i}`,
+      },
+    });
+  }
+
+  // Delete many users
+  const deletedUsers = await db.users.deleteMany({});
+  console.log(deletedUsers);
+});

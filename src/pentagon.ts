@@ -99,7 +99,6 @@ async function deleteImpl<T extends TableDefinition>(
     queryArgs.where ?? {},
     getIndexPrefixes(tableName, tableDefinition.schema),
   );
-  // @ts-ignore TODO: delete should not use QueryArgs or QueryResponse
   return await remove(kv, items.map((i) => i.key));
 }
 
@@ -122,7 +121,6 @@ async function deleteManyImpl<T extends TableDefinition>(
     getIndexPrefixes(tableName, tableDefinition.schema),
   );
 
-  // @ts-ignore TODO: deleteMany should not use QueryArgs or QueryResponse
   return await remove(kv, items.map((i) => i.key));
 }
 

@@ -228,3 +228,8 @@ export type DatabaseValue<T = unknown> =
   | Set<T>
   | Date
   | RegExp;
+
+export type MutationOperation = Omit<
+  keyof Deno.AtomicOperation,
+  "commit" | "check"
+>;
