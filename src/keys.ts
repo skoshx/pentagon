@@ -26,20 +26,20 @@ export function parseKeyProperties(
         return KeyPropertySchema.parse(key);
       } catch {
         throw new PentagonKeyError(
-          `Error parsing property string "${keyPropertyString}". Your schema has invalid properties. Properties ${
+          `Error parsing property string '${keyPropertyString}'. Your schema has invalid properties. Properties ${
             KeyPropertySchema.options.join(
               ", ",
             )
-          } are supported, you passed in "${key}"`,
+          } are supported, you passed in '${key}'`,
         );
       }
     });
 
   if (parsedProperties.length > 1) {
     throw new Error(
-      `Table "${tableName}" can't have more than one type of index for property "${property}". You are using indexes ${
-        parsedProperties.map((p) => `"${p}"`).join(" and ")
-      }. Use only one of the index values "primary", "unique" or "index".`,
+      `Table '${tableName}' can't have more than one type of index for property '${property}'. You are using indexes ${
+        parsedProperties.map((p) => `'${p}'`).join(" and ")
+      }. Use only one of the index values 'primary', 'unique' or 'index'.`,
     );
   }
 
@@ -112,7 +112,7 @@ export function schemaToAccessKeys<T extends ReturnType<typeof z.object>>(
 
   if (primaryKeys.length > 1) {
     throw new Error(
-      `Table "${tableName}" can't have more than one primary key`,
+      `Table '${tableName}' can't have more than one primary key`,
     );
   }
 
@@ -145,7 +145,7 @@ function keysToIndexes(
     if (accessKey.type === "index") {
       if (!primaryKey) {
         throw new Error(
-          `Table "${tableName}" can't use a non-unique index without a primary index`,
+          `Table '${tableName}' can't use a non-unique index without a primary index`,
         );
       }
       return [

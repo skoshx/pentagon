@@ -1,7 +1,6 @@
 // CRUD operations
 import { z } from "../deps.ts";
-import { batchOperations } from "./batchOperations.ts";
-import { PentagonCreateItemError, PentagonDeleteItemError } from "./errors.ts";
+import { withBatchedOperation } from "./batchOperations.ts";
 import {
   getIndexPrefixes,
   keysToItems,
@@ -68,7 +67,9 @@ export async function remove(
   kv: Deno.Kv,
   keys: Deno.KvKey[],
 ) {
-  await batchOperations(kv, "delete", keys);
+  await withBatchedOperation(kv, keys, (res, key) => {
+    res.delete(key);
+  }, "delete");
 }
 
 export async function update<
@@ -78,28 +79,20 @@ export async function update<
   kv: Deno.Kv,
   entries: Deno.KvEntry<Item>[],
 ): Promise<WithVersionstamp<Item>[]> {
-  let res = kv.atomic();
+  const entriesWithVersionstamps = await withBatchedOperation(
+    kv,
+    entries,
+    (res, entry) => {
+      res.check(entry);
+      res.set(entry.key, entry.value);
+    },
+    "update",
+  );
 
-  // Checks
-  for (const entry of entries) {
-    res = res.check(entry);
-  }
-
-  // Sets
-  for (const { value, key } of entries) {
-    res = res.set(key, value);
-  }
-
-  const commitResult = await res.commit();
-
-  if (commitResult.ok) {
-    return entries.map(({ value }) => ({
-      ...value,
-      versionstamp: commitResult.versionstamp,
-    }));
-  }
-
-  throw new PentagonCreateItemError(`Could not update item.`);
+  return entriesWithVersionstamps.map(({ value, versionstamp }) => ({
+    ...value,
+    versionstamp,
+  }));
 }
 
 function createOne<T extends TableDefinition>(
@@ -128,24 +121,9 @@ export async function create<T extends TableDefinition>(
   tableDefinition: T,
   createArgs: CreateArgs<T>,
 ): Promise<WithVersionstamp<z.output<T["schema"]>>> {
-  const res = kv.atomic();
-  const keys = schemaToKeys(tableName, tableDefinition.schema, createArgs.data);
-  const item: z.output<T["schema"]> = tableDefinition.schema.parse(
-    createArgs.data,
-  );
-
-  createOne(res, item, keys);
-
-  const commitResult = await res.commit();
-
-  if (commitResult.ok) {
-    return {
-      ...item,
-      versionstamp: commitResult.versionstamp,
-    };
-  }
-
-  throw new PentagonCreateItemError(`Could not create item.`);
+  return (await createMany(kv, tableName, tableDefinition, {
+    data: [createArgs.data],
+  }))?.[0];
 }
 
 export async function createMany<T extends TableDefinition>(
@@ -154,28 +132,18 @@ export async function createMany<T extends TableDefinition>(
   tableDefinition: T,
   createManyArgs: CreateManyArgs<T>,
 ): Promise<WithVersionstamp<z.output<T["schema"]>>[]> {
-  const res = kv.atomic();
-  const items: z.output<T["schema"]>[] = [];
+  const createdItemsWithVersionstamps = await withBatchedOperation(
+    kv,
+    createManyArgs.data,
+    (res, data) => {
+      const keys = schemaToKeys(tableName, tableDefinition.schema, data);
+      const item: z.output<T["schema"]> = tableDefinition.schema.parse(data);
+      createOne(res, item, keys);
+    },
+    "create",
+  );
 
-  for (const data of createManyArgs.data) {
-    const keys = schemaToKeys(tableName, tableDefinition.schema, data);
-    const item: z.output<T["schema"]> = tableDefinition.schema.parse(data);
-
-    createOne(res, item, keys);
-
-    items.push(item);
-  }
-
-  const commitResult = await res.commit();
-
-  if (commitResult.ok) {
-    return items.map((item) => ({
-      ...item,
-      versionstamp: commitResult.versionstamp,
-    }));
-  }
-
-  throw new PentagonCreateItemError(`Could not create items.`);
+  return createdItemsWithVersionstamps;
 }
 
 export async function findMany<T extends TableDefinition>(
@@ -206,7 +174,7 @@ export async function findMany<T extends TableDefinition>(
       const relationDefinition = tableDefinition.relations?.[relationName];
       if (!relationDefinition) {
         throw new Error(
-          `No relation found for relation name "${relationName}", make sure it's defined in your Pentagon configuration.`,
+          `No relation found for relation name '${relationName}', make sure it's defined in your Pentagon configuration.`,
         );
       }
       const tableName = relationDefinition[0];
