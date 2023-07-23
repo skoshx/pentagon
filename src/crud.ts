@@ -136,9 +136,11 @@ export async function createMany<T extends TableDefinition>(
     kv,
     createManyArgs.data,
     (res, data) => {
-      const keys = schemaToKeys(tableName, tableDefinition.schema, data);
-      const item: z.output<T["schema"]> = tableDefinition.schema.parse(data);
-      createOne(res, item, keys);
+      const parsedData: z.output<T["schema"]> = tableDefinition.schema.parse(
+        data,
+      );
+      const keys = schemaToKeys(tableName, tableDefinition.schema, parsedData);
+      createOne(res, parsedData, keys);
     },
     "create",
   );

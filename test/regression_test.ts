@@ -1,5 +1,8 @@
-import { assertEquals } from "https://deno.land/std@0.186.0/testing/asserts.ts";
-import { clearMocks, createMockDatabase } from "./util.ts";
+import {
+  assert,
+  assertEquals,
+} from "https://deno.land/std@0.186.0/testing/asserts.ts";
+import { clearMocks, createMockDatabase, User } from "./util.ts";
 import { removeVersionstamp } from "../src/util.ts";
 import { createPentagon } from "../mod.ts";
 import { z } from "../deps.ts";
@@ -194,4 +197,34 @@ Deno.test("regression #28", async () => {
   // Delete many users
   const deletedUsers = await db.users.deleteMany({});
   console.log(deletedUsers);
+});
+
+Deno.test("regression #30", async () => {
+  const kv = await Deno.openKv();
+
+  const UserSchemaWithDefaultId = User.extend({
+    id: z.string().uuid().describe("primary").default(() =>
+      crypto.randomUUID()
+    ),
+  });
+
+  const db = createPentagon(kv, {
+    users: {
+      schema: UserSchemaWithDefaultId,
+    },
+  });
+
+  await db.users.deleteMany({});
+  await db.users.create({
+    data: {
+      createdAt: new Date(0),
+      name: "John Doe",
+    },
+  });
+
+  const fetchedUsers = await db.users.findMany({});
+  assert(fetchedUsers.length === 1);
+  assertEquals(fetchedUsers[0].createdAt, new Date(0));
+  assertEquals(fetchedUsers[0].name, "John Doe");
+  kv.close();
 });

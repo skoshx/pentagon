@@ -30,7 +30,7 @@ export async function withBatchedOperation<T>(
 
     if (commitResult.ok === false) {
       throw new PentagonBatchOpError(
-        `Could not perform batched ${opName ? opName : " "}operation.`,
+        `Could not perform batched ${opName ? opName + " " : " "}operation.`,
       );
     }
 
