@@ -12,7 +12,7 @@ const OPERATION_LIMIT = 10;
 export async function withBatchedOperation<T>(
   kv: Deno.Kv,
   itemsToBatch: T[],
-  fn: (res: Deno.AtomicOperation, item: T) => void,
+  fn: (res: Deno.AtomicOperation, item: T) => undefined | unknown,
   opName?: "create" | "update" | "delete" | "read",
 ) {
   const itemBatches: T[][] = [];
@@ -23,8 +23,12 @@ export async function withBatchedOperation<T>(
 
   for (let i = 0; i < itemBatches.length; i++) {
     const res = kv.atomic();
-    for (const item of itemBatches[i]) {
-      fn(res, item);
+    for (let j = 0; j < itemBatches[i].length; j++) {
+      const returnData = fn(res, itemBatches[i][j]);
+      if (returnData) {
+        // @ts-expect-error: we cannot know the data type
+        itemBatches[i][j] = returnData;
+      }
     }
     const commitResult = await res.commit();
 
@@ -36,9 +40,8 @@ export async function withBatchedOperation<T>(
 
     // Add versionstamp to the batch
     for (let j = 0; j < itemBatches[i].length; j++) {
-      const itemIndex = i * OPERATION_LIMIT + j;
       itemsWithVersionstamps.push({
-        ...itemsToBatch[itemIndex],
+        ...itemBatches[i][j],
         versionstamp: commitResult.versionstamp,
       });
     }

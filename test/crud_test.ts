@@ -60,7 +60,6 @@ Deno.test("Create / Read / Update / Remove", async (t) => {
     });
 
     const fetchedUsers = await db.users.findMany({});
-
     assert(
       mockUsers.every((u) =>
         fetchedUsers.find((fetchedUser) => fetchedUser.id === u.id)

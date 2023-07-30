@@ -141,6 +141,7 @@ export async function createMany<T extends TableDefinition>(
       );
       const keys = schemaToKeys(tableName, tableDefinition.schema, parsedData);
       createOne(res, parsedData, keys);
+      return parsedData;
     },
     "create",
   );

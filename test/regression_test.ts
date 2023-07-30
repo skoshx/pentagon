@@ -228,3 +228,70 @@ Deno.test("regression #30", async () => {
   assertEquals(fetchedUsers[0].name, "John Doe");
   kv.close();
 });
+
+Deno.test("regression #33", async () => {
+  const kv = await Deno.openKv();
+
+  const UserSchemaWithDefaultId = User.extend({
+    id: z.string().uuid().describe("primary").default(() =>
+      crypto.randomUUID()
+    ),
+  });
+
+  const WithDefautTimestamps = z.object({
+    createdAt: z
+      .string()
+      .datetime()
+      .default(() => new Date().toISOString()),
+    updatedAt: z
+      .string()
+      .datetime()
+      .default(() => new Date().toISOString())
+      .nullable(),
+  });
+
+  const WithDefaultId = z.object({
+    id: z
+      .string()
+      .uuid()
+      .describe("primary")
+      .default(() => crypto.randomUUID()),
+  });
+
+  const Meeting = WithDefaultId.extend({
+    title: z.string(),
+    slug: z
+      .string()
+      .describe("unique")
+      .min(1)
+      .default(() => crypto.randomUUID()),
+    userId: z.number(),
+  }).merge(WithDefautTimestamps);
+
+  const db = createPentagon(kv, {
+    users: {
+      schema: UserSchemaWithDefaultId,
+    },
+    meeting: {
+      schema: Meeting,
+    },
+  });
+
+  await db.users.deleteMany({});
+  await db.meeting.deleteMany({});
+
+  const meeting = await db.meeting.create({
+    data: {
+      title: Math.random().toString(),
+      userId: Math.random(),
+    },
+  });
+
+  assertEquals(typeof meeting.id, "string");
+  assertEquals(typeof meeting.title, "string");
+  assertEquals(typeof meeting.slug, "string");
+  assertEquals(typeof meeting.userId, "number");
+  assertEquals(typeof meeting.createdAt, "string");
+  assertEquals(typeof meeting.updatedAt, "string");
+  kv.close();
+});
