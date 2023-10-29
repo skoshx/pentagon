@@ -68,7 +68,18 @@ Deno.test("include", async (t) => {
   });
 
   await t.step("include > many to many > target (many)", async () => {
-    // @todo(skoshx): implement (implicit?) many to many relations
+    const playlist = await db.playlists.findMany({
+      where: {
+        id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc" 
+      },
+      include: {
+        songs: true,
+      }
+    })
+
+    assertEquals(playlist[0].songs.length, 2);
+    assertEquals(playlist[0].songs[0].title, "Zonestic");
+    assertEquals(playlist[0].songs[1].title, "Superstar");
   });
 
   await t.step("include > many to many > source (many)", async () => {

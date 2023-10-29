@@ -155,6 +155,7 @@ export async function findMany<T extends TableDefinition>(
   tableDefinition: T,
   queryArgs: QueryArgs<T>,
 ) {
+  console.log(tableName);
   const keys = schemaToKeys(
     tableName,
     tableDefinition.schema,
@@ -164,7 +165,7 @@ export async function findMany<T extends TableDefinition>(
   const foundItems = await keysToItems(
     kv,
     tableName,
-    keys.length > 0 ? [keys[0]] : [],
+    keys.length > 0 ? keys : [],
     queryArgs.where ?? {},
     indexPrefixes.length > 0 ? [indexPrefixes[0]] : [],
   );

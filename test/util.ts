@@ -26,6 +26,20 @@ export const Category = z.object({
   name: z.string(),
 });
 
+export const Song = z.object({
+  id: z.string().uuid().describe("primary"),
+  createdAt: z.date(),
+  playlists: z.array(z.string()),
+  title: z.string(),
+});
+
+export const Playlist = z.object({
+  id: z.string().uuid().describe("primary"),
+  createdAt: z.date(),
+  songs: z.array(z.string()),
+  title: z.string(),
+});
+
 export const kv = await Deno.openKv();
 
 /*
@@ -65,6 +79,18 @@ export function createMockDatabase() {
         user: ["users", User, "userId", "id"],
       },
     },
+    songs: {
+      schema: Song,
+      relations: {
+        playlists: ["playlists", [Playlist], "playlists", "id"]
+      }
+    },
+    playlists: {
+      schema: Playlist,
+      relations: {
+        songs: ["songs", [Song], "songs", "id"]
+      }
+    }
   });
 }
 
@@ -87,6 +113,42 @@ export async function populateMockDatabase(
       name: "Cheeseburger",
     },
   });
+
+  await db.songs.create({
+    data: {
+      id: "aaa62b91-a021-41c3-a2ce-ef079859d5aa",
+      createdAt: new Date(0),
+      playlists: ["aaa62b91-a021-41c3-a2ce-ef079859d5cc", "aaa62b91-a021-41c3-a2ce-ef079859d5dd"],
+      title: "Zonestic",
+    },
+  });
+
+  await db.songs.create({
+    data: {
+      id: "aaa62b91-a021-41c3-a2ce-ef079859d5bb",
+      createdAt: new Date(0),
+      playlists: ["aaa62b91-a021-41c3-a2ce-ef079859d5cc"],
+      title: "Superstar",
+    },
+  });
+
+  await db.playlists.create({
+    data: {
+      id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc",
+      createdAt: new Date(0),
+      songs: ["aaa62b91-a021-41c3-a2ce-ef079859d5aa", "aaa62b91-a021-41c3-a2ce-ef079859d5bb"],
+      title: "First songs on my feed"
+    }
+  })
+
+  await db.playlists.create({
+    data: {
+      id: "aaa62b91-a021-41c3-a2ce-ef079859d5dd",
+      createdAt: new Date(0),
+      songs: ["aaa62b91-a021-41c3-a2ce-ef079859d5aa"],
+      title: "Jammer"
+    }
+  })
 }
 
 export async function clearMocks() {
@@ -94,6 +156,12 @@ export async function clearMocks() {
     await kv.delete(x.key);
   }
   for await (const x of kv.list({ prefix: ["orders"] })) {
+    await kv.delete(x.key);
+  }
+  for await (const x of kv.list({ prefix: ["songs"] })) {
+    await kv.delete(x.key);
+  }
+  for await (const x of kv.list({ prefix: ["playlists"] })) {
     await kv.delete(x.key);
   }
 }
