@@ -155,27 +155,56 @@ Deno.test("findMany", async (t) => {
     });
   });
 
-  // @todo: currently failing because of issue #24
-  // @todo(Danielduel): uncomment it
+  await t.step({
+    name: "should not return duplicate posts",
+    fn: async () => {
+      const posts = await db.posts.findMany({
+        where: {
+          id: "aa68f6ab-5ae1-466c-b4a7-88469e51bb62",
+          title: "Secondary indexing with Deno KV",
+          category: "Deno",
+        },
+      });
+
+      assertEquals(posts.length, 1);
+      assertEquals(removeVersionstamp(posts[0]), {
+        id: "aa68f6ab-5ae1-466c-b4a7-88469e51bb62",
+        createdAt: new Date(0),
+        userId: "67218087-d9a8-4a57-b058-adc01f179ff9",
+        title: "Secondary indexing with Deno KV",
+        category: "Deno",
+      });
+    },
+  });
+
+  await t.step({
+    name: "should treat where as AND operation",
+    fn: async () => {
+      const posts = await db.posts.findMany({
+        where: {
+          id: "aa68f6ab-5ae1-466c-b4a7-88469e51bb62",
+          title: "Secondary indexing with Deno KV",
+          category: "THIS IS INVALID",
+        },
+      });
+
+      assertEquals(posts.length, 0);
+    },
+  });
+
+  // @todo(Danielduel):
+  // I would really like to be able to do stuff like this,
+  // but I am not sure if it makes sense from the point of view of the database.
   // await t.step({
-  //   name: "should not return duplicate posts",
+  //   name: "should return all of index",
   //   fn: async () => {
   //     const posts = await db.posts.findMany({
   //       where: {
-  //         id: "aa68f6ab-5ae1-466c-b4a7-88469e51bb62",
-  //         title: "Secondary indexing with Deno KV",
-  //         category: "Deno",
-  //       },
+  //         category: "Deno"
+  //       }
   //     });
 
-  //     assertEquals(posts.length, 1);
-  //     assertEquals(removeVersionstamp(posts[0]), {
-  //       id: "aa68f6ab-5ae1-466c-b4a7-88469e51bb62",
-  //       createdAt: new Date(0),
-  //       userId: "67218087-d9a8-4a57-b058-adc01f179ff9",
-  //       title: "Secondary indexing with Deno KV",
-  //       category: "Deno",
-  //     });
+  //     assertEquals(posts.length, 0);
   //   },
   // });
 
