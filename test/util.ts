@@ -82,15 +82,15 @@ export function createMockDatabase() {
     songs: {
       schema: Song,
       relations: {
-        playlists: ["playlists", [Playlist], "playlists", "id"]
-      }
+        playlists: ["playlists", [Playlist], "playlists", "id"],
+      },
     },
     playlists: {
       schema: Playlist,
       relations: {
-        songs: ["songs", [Song], "songs", "id"]
-      }
-    }
+        songs: ["songs", [Song], "songs", "id"],
+      },
+    },
   });
 }
 
@@ -118,7 +118,10 @@ export async function populateMockDatabase(
     data: {
       id: "aaa62b91-a021-41c3-a2ce-ef079859d5aa",
       createdAt: new Date(0),
-      playlists: ["aaa62b91-a021-41c3-a2ce-ef079859d5cc", "aaa62b91-a021-41c3-a2ce-ef079859d5dd"],
+      playlists: [
+        "aaa62b91-a021-41c3-a2ce-ef079859d5cc",
+        "aaa62b91-a021-41c3-a2ce-ef079859d5dd",
+      ],
       title: "Zonestic",
     },
   });
@@ -136,19 +139,22 @@ export async function populateMockDatabase(
     data: {
       id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc",
       createdAt: new Date(0),
-      songs: ["aaa62b91-a021-41c3-a2ce-ef079859d5aa", "aaa62b91-a021-41c3-a2ce-ef079859d5bb"],
-      title: "First songs on my feed"
-    }
-  })
+      songs: [
+        "aaa62b91-a021-41c3-a2ce-ef079859d5aa",
+        "aaa62b91-a021-41c3-a2ce-ef079859d5bb",
+      ],
+      title: "First songs on my feed",
+    },
+  });
 
   await db.playlists.create({
     data: {
       id: "aaa62b91-a021-41c3-a2ce-ef079859d5dd",
       createdAt: new Date(0),
       songs: ["aaa62b91-a021-41c3-a2ce-ef079859d5aa"],
-      title: "Jammer"
-    }
-  })
+      title: "Jammer",
+    },
+  });
 }
 
 export async function clearMocks() {

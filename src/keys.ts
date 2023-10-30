@@ -56,12 +56,12 @@ export function schemaToKeys<T extends ReturnType<typeof z.object>>(
   const pentagonKeys: PentagonKey[] = [];
 
   for (let i = 0; i < accessKeys.length; i++) {
-    denoKeysArr[i].forEach(denoKey => {
+    denoKeysArr[i].forEach((denoKey) => {
       pentagonKeys.push({
         accessKey: accessKeys[i],
         denoKey: denoKey,
-      })
-  });
+      });
+    });
   }
 
   return pentagonKeys;

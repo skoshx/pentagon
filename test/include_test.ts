@@ -70,12 +70,12 @@ Deno.test("include", async (t) => {
   await t.step("include > many to many > target (many)", async () => {
     const playlist = await db.playlists.findFirst({
       where: {
-        id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc" 
+        id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc",
       },
       include: {
-        songs: true
-      }
-    })
+        songs: true,
+      },
+    });
 
     assertEquals(playlist.songs.length, 2);
     assertEquals(playlist.songs[0].title, "Zonestic");
@@ -85,12 +85,12 @@ Deno.test("include", async (t) => {
   await t.step("include > many to many > source (many)", async () => {
     const song = await db.songs.findFirst({
       where: {
-        title: "Zonestic"
+        title: "Zonestic",
       },
       include: {
-        playlists: true
-      }
-    })
+        playlists: true,
+      },
+    });
 
     assertEquals(song.playlists.length, 2);
     assertEquals(song.playlists[0].title, "First songs on my feed");
@@ -102,7 +102,7 @@ Deno.test("include", async (t) => {
   // Find the playlists that have songs from given playlist
   // const playlist = await db.playlists.findFirst({
   //   where: {
-  //     id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc" 
+  //     id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc"
   //   },
   //   include: {
   //     songs: {
