@@ -65,7 +65,8 @@ export async function read<T extends TableDefinition>(
   if (keys.length > 1) {
     const unique = [] as (string | null)[];
     // Next line:
-    // Filter all items from the result, if it NOT in `unique` then add it to `unique` and don't remove it
+    // Filter all items from the result, if it NOT in `unique` then add it to `unique`
+    // and don't remove it from the final results
     return result.filter(
       (x) => (!unique.includes(x.versionstamp) && unique.push(x.versionstamp)),
     );
