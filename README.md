@@ -4,7 +4,7 @@
 
 <sup>Sponsored by</sup>
 <br />
-[![Flytrap](https://www.useflytrap.com/brand/flytrap-white-bg-1-4.svg)](https://www.useflytrap.com/?utm_campaign=github_repo&utm_medium=referral&utm_content=pentagon&utm_source=github)
+[![Flytrap](https://www.useflytrap.com/brand/flytrap-white-bg-1-8.svg)](https://www.useflytrap.com/?utm_campaign=github_repo&utm_medium=referral&utm_content=pentagon&utm_source=github)
 <br />
 <b>A better way to understand your production bugs.</b>
 
