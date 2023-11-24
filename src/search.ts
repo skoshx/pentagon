@@ -8,6 +8,9 @@ export function isMatchingValue(a: DatabaseValue, b: DatabaseValue) {
   if (a instanceof Date && b instanceof Date) {
     return a.getTime() === b.getTime();
   }
+  if (b instanceof Array) {
+    return b.includes(a);
+  }
   return a === b;
 }
 

@@ -155,7 +155,6 @@ Deno.test("findMany", async (t) => {
     });
   });
 
-  // @todo: currently failing because of issue #24
   await t.step({
     name: "should not return duplicate posts",
     fn: async () => {
@@ -177,6 +176,37 @@ Deno.test("findMany", async (t) => {
       });
     },
   });
+
+  await t.step({
+    name: "should treat where as AND operation",
+    fn: async () => {
+      const posts = await db.posts.findMany({
+        where: {
+          id: "aa68f6ab-5ae1-466c-b4a7-88469e51bb62",
+          title: "Secondary indexing with Deno KV",
+          category: "THIS IS INVALID",
+        },
+      });
+
+      assertEquals(posts.length, 0);
+    },
+  });
+
+  // @todo(Danielduel):
+  // I would really like to be able to do stuff like this,
+  // but I am not sure if it makes sense from the point of view of the database.
+  // await t.step({
+  //   name: "should return all of index",
+  //   fn: async () => {
+  //     const posts = await db.posts.findMany({
+  //       where: {
+  //         category: "Deno"
+  //       }
+  //     });
+
+  //     assertEquals(posts.length, 0);
+  //   },
+  // });
 
   await clearDatabase(kv);
   kv.close();

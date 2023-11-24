@@ -198,9 +198,10 @@ export type QueryArgs<T extends TableDefinition> = {
 };
 
 export type AccessKey =
-  & {
-    value: Deno.KvKeyPart;
-  }
+  & (
+    | { value: Deno.KvKeyPart }
+    | { value: Deno.KvKeyPart[] }
+  )
   & (
     | { type: "primary" }
     | { type: "index"; suffix: string }

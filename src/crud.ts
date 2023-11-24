@@ -57,10 +57,22 @@ export async function read<T extends TableDefinition>(
   keys: PentagonKey[],
   kvOptions?: QueryKvOptions,
 ) {
-  return await kv.getMany<z.output<T["schema"]>[]>(
+  const result = await kv.getMany<z.output<T["schema"]>[]>(
     keys.map(({ denoKey }) => denoKey),
     kvOptions,
   );
+
+  if (keys.length > 1) {
+    const unique = [] as (string | null)[];
+    // Next line:
+    // Filter all items from the result, if it NOT in `unique` then add it to `unique`
+    // and don't remove it from the final results
+    return result.filter(
+      (x) => (!unique.includes(x.versionstamp) && unique.push(x.versionstamp)),
+    );
+  }
+
+  return result;
 }
 
 export async function remove(
@@ -164,7 +176,7 @@ export async function findMany<T extends TableDefinition>(
   const foundItems = await keysToItems(
     kv,
     tableName,
-    keys.length > 0 ? [keys[0]] : [],
+    keys.length > 0 ? keys : [],
     queryArgs.where ?? {},
     indexPrefixes.length > 0 ? [indexPrefixes[0]] : [],
   );

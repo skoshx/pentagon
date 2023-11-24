@@ -52,13 +52,15 @@ export function schemaToKeys<T extends ReturnType<typeof z.object>>(
   values: Partial<z.input<T>>,
 ): PentagonKey[] {
   const accessKeys = schemaToAccessKeys(tableName, schema, values);
-  const denoKeys = keysToIndexes(tableName, accessKeys);
+  const denoKeysArr = keysToIndexes(tableName, accessKeys);
   const pentagonKeys: PentagonKey[] = [];
 
   for (let i = 0; i < accessKeys.length; i++) {
-    pentagonKeys.push({
-      accessKey: accessKeys[i],
-      denoKey: denoKeys[i],
+    denoKeysArr[i].forEach((denoKey) => {
+      pentagonKeys.push({
+        accessKey: accessKeys[i],
+        denoKey: denoKey,
+      });
     });
   }
 
@@ -127,18 +129,26 @@ export function schemaToAccessKeys<T extends ReturnType<typeof z.object>>(
 function keysToIndexes(
   tableName: string,
   accessKeys: AccessKey[],
-): Deno.KvKey[] {
+): Deno.KvKey[][] {
   const primaryKey = accessKeys.find(({ type }) => type === "primary");
 
   return accessKeys.map((accessKey) => {
+    const accessKeyValueArr = (accessKey.value instanceof Array)
+      ? accessKey.value
+      : [accessKey.value];
+
     // Primary key
     if (accessKey.type === "primary") {
-      return [tableName, accessKey.value];
+      return accessKeyValueArr.map(
+        (accessKeyValue) => [tableName, accessKeyValue],
+      );
     }
 
     // Unique indexed key
     if (accessKey.type === "unique") {
-      return [`${tableName}${accessKey.suffix}`, accessKey.value];
+      return accessKeyValueArr.map(
+        (accessKeyValue) => [`${tableName}${accessKey.suffix}`, accessKeyValue],
+      );
     }
 
     // Non-unique indexed key
@@ -148,11 +158,18 @@ function keysToIndexes(
           `Table '${tableName}' can't use a non-unique index without a primary index`,
         );
       }
-      return [
-        `${tableName}${accessKey.suffix}`,
-        accessKey.value,
-        primaryKey.value,
-      ];
+      const primaryKeyValueArr = (primaryKey.value instanceof Array)
+        ? primaryKey.value
+        : [primaryKey.value];
+      return accessKeyValueArr.map((accessKeyValue) =>
+        primaryKeyValueArr.map(
+          (primaryKeyValue) => [
+            `${tableName}${accessKey.suffix}`,
+            accessKeyValue,
+            primaryKeyValue,
+          ],
+        )
+      ).flat();
     }
 
     throw new Error("Invalid access key");

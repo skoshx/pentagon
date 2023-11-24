@@ -68,12 +68,48 @@ Deno.test("include", async (t) => {
   });
 
   await t.step("include > many to many > target (many)", async () => {
-    // @todo(skoshx): implement (implicit?) many to many relations
+    const playlist = await db.playlists.findFirst({
+      where: {
+        id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc",
+      },
+      include: {
+        songs: true,
+      },
+    });
+
+    assertEquals(playlist.songs.length, 2);
+    assertEquals(playlist.songs[0].title, "Zonestic");
+    assertEquals(playlist.songs[1].title, "Superstar");
   });
 
   await t.step("include > many to many > source (many)", async () => {
-    // @todo(skoshx): implement (implicit?) many to many relations
+    const song = await db.songs.findFirst({
+      where: {
+        title: "Zonestic",
+      },
+      include: {
+        playlists: true,
+      },
+    });
+
+    assertEquals(song.playlists.length, 2);
+    assertEquals(song.playlists[0].title, "First songs on my feed");
+    assertEquals(song.playlists[1].title, "Jammer");
   });
+
+  // @todo(Danielduel):
+  // Recurrent includes?
+  // Find the playlists that have songs from given playlist
+  // const playlist = await db.playlists.findFirst({
+  //   where: {
+  //     id: "aaa62b91-a021-41c3-a2ce-ef079859d5cc"
+  //   },
+  //   include: {
+  //     songs: {
+  //       playlists: true
+  //     },
+  //   }
+  // })
 
   await t.step("include > select", async () => {
     const userWithPartialOrders = await db.users.findFirst({
