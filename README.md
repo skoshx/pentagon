@@ -1,13 +1,15 @@
 <p align="center">
 	<img src="https://github.com/skoshx/pentagon/raw/main/docs/pentagon-banner.png" />
-</p>
-<hr>
-<div align="center">
-		<p>
+  <hr>
+  <p>
 			<sup>Sponsored by</sup>
 			<a href="https://www.useflytrap.com/?utm_campaign=github_repo&utm_medium=referral&utm_content=pentagon&utm_source=github">
 				<div>
-					<img src="https://www.useflytrap.com/brand/flytrap-text-dark.svg" width="120" alt="Flytrap">
+          <picture>
+            <source width="220" media="(prefers-color-scheme: dark)" srcset="https://www.useflytrap.com/brand/flytrap-text-light.svg">
+            <source width="220" media="(prefers-color-scheme: light)" srcset="https://www.useflytrap.com/brand/flytrap-text-dark.svg">
+            <img width="220" src="https://www.useflytrap.com/brand/flytrap-text-dark.svg" alt="Flytrap">
+          </picture>
 				</div>
 				<b>A better way to understand your production bugs.</b>
 				<div>
@@ -15,8 +17,8 @@
 				</div>
 			</a>
 		</p>
-	</div>
-<hr>
+    <hr>
+</p>
 
 # pentagon
 
