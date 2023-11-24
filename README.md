@@ -1,24 +1,16 @@
 <p align="center">
 	<img src="https://github.com/skoshx/pentagon/raw/main/docs/pentagon-banner.png" />
-  <hr>
-  <p>
-			<sup>Sponsored by</sup>
-			<a href="https://www.useflytrap.com/?utm_campaign=github_repo&utm_medium=referral&utm_content=pentagon&utm_source=github">
-				<div>
-          <picture>
-            <source width="220" media="(prefers-color-scheme: dark)" srcset="https://www.useflytrap.com/brand/flytrap-text-light.svg">
-            <source width="220" media="(prefers-color-scheme: light)" srcset="https://www.useflytrap.com/brand/flytrap-text-dark.svg">
-            <img width="220" src="https://www.useflytrap.com/brand/flytrap-text-dark.svg" alt="Flytrap">
-          </picture>
-				</div>
-				<b>A better way to understand your production bugs.</b>
-				<div>
-					<sup>See all the data flowing through your code leading up to bugs. Flytrap allows you to fix bugs in production in a matter of minutes, instead of days.</sup>
-				</div>
-			</a>
-		</p>
-    <hr>
 </p>
+
+<sup>Sponsored by</sup>
+<br />
+[![Flytrap](https://www.useflytrap.com/brand/flytrap-white-bg-1-4.svg)](https://www.useflytrap.com/?utm_campaign=github_repo&utm_medium=referral&utm_content=pentagon&utm_source=github)
+<br />
+<b>A better way to understand your production bugs.</b>
+
+<div>
+	<sup>See all the data flowing through your code leading up to bugs. Flytrap allows you to fix bugs in production in a matter of minutes, instead of days.</sup>
+</div>
 
 # pentagon
 
