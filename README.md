@@ -1,6 +1,22 @@
 <p align="center">
 	<img src="https://github.com/skoshx/pentagon/raw/main/docs/pentagon-banner.png" />
 </p>
+<hr>
+<div align="center">
+		<p>
+			<sup>Sponsored by</sup>
+			<a href="https://www.useflytrap.com/?utm_campaign=github_repo&utm_medium=referral&utm_content=pentagon&utm_source=github">
+				<div>
+					<img src="https://www.useflytrap.com/brand/flytrap-text-dark.svg" width="120" alt="Flytrap">
+				</div>
+				<b>A better way to understand your production bugs.</b>
+				<div>
+					<sup>See all the data flowing through your code leading up to bugs. Flytrap allows you to fix bugs in production in a matter of minutes, instead of days.</sup>
+				</div>
+			</a>
+		</p>
+	</div>
+<hr>
 
 # pentagon
 
