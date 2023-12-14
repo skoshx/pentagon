@@ -37,7 +37,7 @@ export function createUser() {
     data: {
       id: crypto.randomUUID(),
       createdAt: new Date(),
-      name: "Random",
+      name: "Anonymous",
     },
   });
 }
