@@ -32,8 +32,8 @@ export const db = createPentagon(kv, {
   },
 });
 
-export async function createUser() {
-  return await db.users.create({
+export function createUser() {
+  return db.users.create({
     data: {
       id: crypto.randomUUID(),
       createdAt: new Date(),

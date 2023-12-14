@@ -1,11 +1,12 @@
 {
   "lock": false,
   "tasks": {
-    "start": "deno run --unstable -A --watch=static/,routes/ dev.ts"
+    "start": "deno run --unstable -A --watch=static/,routes/ dev.ts",
+    "build": "deno run -A dev.ts build",
+    "preview": "deno run -A main.ts"
   },
+  "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "preact" },
   "importMap": "./import_map.json",
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact"
-  }
+  "lint": { "rules": { "tags": ["fresh", "recommended"] } },
+  "exclude": ["**/_fresh/*"]
 }
