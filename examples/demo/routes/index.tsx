@@ -1,7 +1,8 @@
 import {Head} from "$fresh/runtime.ts";
 import {Handlers, PageProps} from "$fresh/server.ts";
+import {z} from "zod";
+
 import {db, TodoTask, User} from "../lib/db.ts";
-import {z} from "https://deno.land/x/zod@v3.21.4/mod.ts";
 import Input from "../components/ui/input.tsx";
 import Button from "../components/ui/button.tsx";
 
@@ -9,20 +10,8 @@ type Task = z.infer<typeof TodoTask>;
 type User = z.infer<typeof User>;
 type TasksAndUser = { tasks: Task[]; user: User };
 
-function parseCookie(cookieString: string): Record<string, string> {
-  const cookies: Record<string, string> = {};
-  const cookiePairs = cookieString.split(";");
-
-  for (const cookiePair of cookiePairs) {
-    const [name, value] = cookiePair.trim().split("=");
-    cookies[name] = value;
-  }
-
-  return cookies;
-}
-
-export const handler: Handlers<any, TasksAndUser> = {
-  async GET(req, ctx) {
+export const handler: Handlers<unknown, TasksAndUser> = {
+  async GET(_, ctx) {
     // Get my tasks
     const tasks = await db.tasks.findMany({
       where: { userId: ctx.state?.user.id },
@@ -37,7 +26,7 @@ export const handler: Handlers<any, TasksAndUser> = {
     if (!description || !ctx.state?.user) {
       return new Response("Bad request", { status: 400 });
     }
-    const createdTask = await db.tasks.create({
+    await db.tasks.create({
       data: {
         id: crypto.randomUUID(),
         createdAt: new Date(),
@@ -82,8 +71,11 @@ export default function Home(
       <article class="py-8 md:container md:mx-auto px-4 md:px-0">
         {tasks.length === 0
           ? <p>No Tasks Found!</p>
-          : <ul class="list-disc list-inside">{tasks.map((task) => <li key={task.id}>{task.description}</li>)}</ul>
-        }
+          : (
+            <ul class="list-disc list-inside">
+              {tasks.map((task) => <li key={task.id}>{task.description}</li>)}
+            </ul>
+          )}
       </article>
     </>
   );

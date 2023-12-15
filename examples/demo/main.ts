@@ -7,7 +7,7 @@
 
 import "$std/dotenv/load.ts";
 
-import {start} from "$fresh/server.ts";
+import { start } from "$fresh/server.ts";
 import manifest from "./fresh.gen.ts";
 
 import tailwind from "$fresh/plugins/tailwind.ts";

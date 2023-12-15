@@ -1,7 +1,4 @@
-import {
-  getCookies,
-  setCookie,
-} from "https://deno.land/std@0.209.0/http/cookie.ts";
+import { getCookies, setCookie } from "$std/http/cookie.ts";
 import { FreshContext } from "$fresh/server.ts";
 import { createUser, db } from "../lib/db.ts";
 

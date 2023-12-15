@@ -1,14 +1,14 @@
-import { createPentagon } from "https://deno.land/x/pentagon@v0.0.2/mod.ts";
-import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
+import { createPentagon } from "pentagon";
+import { z } from "zod";
 
 export const User = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   createdAt: z.date(),
   name: z.string(),
 });
 
 export const TodoTask = z.object({
-  id: z.string().uuid().describe("primary, unique"),
+  id: z.string().uuid().describe("primary"),
   userId: z.string().uuid(),
   createdAt: z.date(),
   description: z.string(),
@@ -21,7 +21,7 @@ export const db = createPentagon(kv, {
   users: {
     schema: User,
     relations: {
-      tasks: ["tasks", [TodoTask], undefined, "userId"],
+      tasks: ["tasks", [TodoTask], "", "userId"],
     },
   },
   tasks: {

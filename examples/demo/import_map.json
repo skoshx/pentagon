@@ -9,6 +9,9 @@
     "tailwindcss": "npm:tailwindcss@3.3.5",
     "tailwindcss/": "npm:/tailwindcss@3.3.5/",
     "tailwindcss/plugin": "npm:/tailwindcss@3.3.5/plugin.js",
-    "$std/": "https://deno.land/std@0.187.0/"
+    "$std/": "https://deno.land/std@0.187.0/",
+    "pentagon": "https://deno.land/x/pentagon@v0.1.5/mod.ts",
+    "x-pentagon": "../../mod.ts",
+    "zod": "https://deno.land/x/zod@v3.21.4/mod.ts"
   }
 }
