@@ -1,56 +1,12 @@
-import { JSX } from "preact";
-import {
-  cva,
-  type VariantProps,
-} from "https://esm.sh/class-variance-authority@0.6.0";
-// import { cva, type VariantProps } from "npm:class-variance-authority"
-import { twMerge } from "https://esm.sh/tailwind-merge@1.13.0";
+import {JSX} from "preact";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-input hover:bg-accent hover:text-accent-foreground",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "underline-offset-4 hover:underline text-primary",
-      },
-      size: {
-        default: "h-10 py-2 px-4",
-        sm: "h-9 px-3 rounded-md",
-        lg: "h-11 px-8 rounded-md",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
-
-export interface ButtonProps
-  extends
-    JSX.HTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-}
-
-const Button = (
-  { className, variant, size, asChild = false, ...props }: ButtonProps,
-) => {
-  // const Comp = asChild ? Slot : "button"
+export default function Button(props: JSX.HTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      className={twMerge(buttonVariants({ variant, size, className }))}
       {...props}
+      class={`px-3 py-2 bg-white rounded border(gray-500 2) hover:bg-gray-200 active:bg-gray-300 disabled:(opacity-50 cursor-not-allowed) ${
+        props.class ?? ""
+      }`}
     />
   );
-};
-
-export { Button, buttonVariants };
+}

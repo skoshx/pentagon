@@ -1,9 +1,9 @@
-import { Head } from "$fresh/runtime.ts";
-import { Handlers, PageProps } from "$fresh/server.ts";
-import { db, TodoTask, User } from "../lib/db.ts";
-import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import {Input} from "../components/ui/input.tsx";
-import {Button} from "../components/ui/button.tsx";
+import {Head} from "$fresh/runtime.ts";
+import {Handlers, PageProps} from "$fresh/server.ts";
+import {db, TodoTask, User} from "../lib/db.ts";
+import {z} from "https://deno.land/x/zod@v3.21.4/mod.ts";
+import Input from "../components/ui/input.tsx";
+import Button from "../components/ui/button.tsx";
 
 type Task = z.infer<typeof TodoTask>;
 type User = z.infer<typeof User>;
@@ -23,7 +23,6 @@ function parseCookie(cookieString: string): Record<string, string> {
 
 export const handler: Handlers<any, TasksAndUser> = {
   async GET(req, ctx) {
-
     // Get my tasks
     const tasks = await db.tasks.findMany({
       where: { userId: ctx.state?.user.id },
@@ -52,35 +51,40 @@ export const handler: Handlers<any, TasksAndUser> = {
   },
 };
 
-export default function Home({ data: { tasks, user } }: PageProps<TasksAndUser>) {
+export default function Home(
+  { data: { tasks, user } }: PageProps<TasksAndUser>,
+) {
   return (
     <>
       <Head>
         <title>Pentagon Todo List</title>
       </Head>
-      <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              Welcome back {user.name}!
-            </h2>
-            <p className="text-muted-foreground">
-              Your user id is{" "}
-              {user.id}, here&apos;s a list of your tasks for this month!
-            </p>
-          </div>
-        </div>
-        {user && <form className="flex gap-2 w-full" method="POST">
+
+      <header className="flex items-center justify-between space-y-2 md:container md:mx-auto py-8 flex-wrap px-4 md:px-0">
+        <p class="text-2xl font-bold tracking-tight">
+          Welcome back {user.name}!
+        </p>
+        <p class="text-muted-foreground">
+          Your user id is{" "}
+          {user.id}, here&apos;s a list of your tasks for this month!
+        </p>
+      </header>
+      <form class="w-full bg-slate-100 py-8 px-4 md:px-0" method="POST">
+        <fieldset class="flex gap-2 md:container md:mx-auto">
           <Input
-              placeholder="What should I do today?"
-              name="description"
+            placeholder="What should I do today?"
+            class="flex-1"
+            name="description"
           />
           <Button type="submit">Save</Button>
-        </form>}
-        {tasks.length === 0 && <h1>No Tasks Found!</h1>}
-        {tasks.length > 0 &&
-            tasks.map((task) => <h1 key={task.id}>{task.description}</h1>)}
-      </div>
+        </fieldset>
+      </form>
+      <article class="py-8 md:container md:mx-auto px-4 md:px-0">
+        {tasks.length === 0
+          ? <p>No Tasks Found!</p>
+          : <ul class="list-disc list-inside">{tasks.map((task) => <li key={task.id}>{task.description}</li>)}</ul>
+        }
+      </article>
     </>
   );
 }

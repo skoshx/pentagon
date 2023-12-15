@@ -1,9 +1,12 @@
-import { getCookies, setCookie } from "https://deno.land/std@0.209.0/http/cookie.ts";
+import {
+  getCookies,
+  setCookie,
+} from "https://deno.land/std@0.209.0/http/cookie.ts";
 import { FreshContext } from "$fresh/server.ts";
-import {createUser, db} from "../lib/db.ts";
+import { createUser, db } from "../lib/db.ts";
 
 type State = {
-  user: { id: string }
+  user: { id: string };
 };
 
 export async function handler(
@@ -11,9 +14,11 @@ export async function handler(
   ctx: FreshContext<State>,
 ) {
   const cookies = getCookies(req.headers);
-  if (ctx.destination !== 'route' || cookies.userid != null) {
+  if (ctx.destination !== "route" || cookies.userid != null) {
     if (cookies.userid) {
-      ctx.state.user = await db.users.findFirst({ where: { id: cookies.userid } });
+      ctx.state.user = await db.users.findFirst({
+        where: { id: cookies.userid },
+      });
     }
     return ctx.next();
   }
@@ -27,7 +32,11 @@ export async function handler(
   const resp = await ctx.next();
   const expirationDate = new Date();
   expirationDate.setMonth(expirationDate.getMonth() + 1);
-  setCookie(resp.headers, { name: 'userid', value: createdUser.id, expires: expirationDate })
+  setCookie(resp.headers, {
+    name: "userid",
+    value: createdUser.id,
+    expires: expirationDate,
+  });
 
   return resp;
 }
