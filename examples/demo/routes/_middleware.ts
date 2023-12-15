@@ -1,29 +1,39 @@
-import { MiddlewareHandlerContext } from "$fresh/server.ts";
-import { createUser } from "../lib/db.ts";
+import { getCookies, setCookie } from "$std/http/cookie.ts";
+import { FreshContext } from "$fresh/server.ts";
+import { createUser, db } from "../lib/db.ts";
 
-interface State {
-  data: string;
-}
+type State = {
+  user: { id: string };
+};
 
 export async function handler(
-  _: Request,
-  ctx: MiddlewareHandlerContext<State>,
+  req: Request,
+  ctx: FreshContext<State>,
 ) {
-  const resp = await ctx.next();
-  const userId = resp.headers.get("userid");
-
-  if (!userId) {
-    const createdUser = await createUser();
-    if (!createdUser) {
-      return new Response(`Oops! Something went wrong!`, { status: 500 });
+  const cookies = getCookies(req.headers);
+  if (ctx.destination !== "route" || cookies.userid != null) {
+    if (cookies.userid) {
+      ctx.state.user = await db.users.findFirst({
+        where: { id: cookies.userid },
+      });
     }
-    const expirationDate = new Date();
-    expirationDate.setMonth(expirationDate.getMonth() + 1);
-    resp.headers.set(
-      `set-cookie`,
-      `userid=${createdUser.id}; Path=/; Expires=${expirationDate.toUTCString()}; HttpOnly`,
-    );
+    return ctx.next();
   }
+
+  const createdUser = await createUser();
+  if (!createdUser) {
+    return new Response(`Oops! Something went wrong!`, { status: 500 });
+  }
+  ctx.state.user = createdUser;
+
+  const resp = await ctx.next();
+  const expirationDate = new Date();
+  expirationDate.setMonth(expirationDate.getMonth() + 1);
+  setCookie(resp.headers, {
+    name: "userid",
+    value: createdUser.id,
+    expires: expirationDate,
+  });
 
   return resp;
 }

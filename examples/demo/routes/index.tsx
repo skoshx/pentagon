@@ -1,94 +1,82 @@
-import { Head } from "$fresh/runtime.ts";
-import { Handlers, PageProps } from "https://deno.land/x/fresh@1.1.6/server.ts";
-import { db, TodoTask, User } from "../lib/db.ts";
-import { z } from "https://deno.land/x/zod@v3.21.4/mod.ts";
-import SubmitTask from "../islands/SubmitTask.tsx";
+import {Head} from "$fresh/runtime.ts";
+import {Handlers, PageProps} from "$fresh/server.ts";
+import {z} from "zod";
+
+import {db, TodoTask, User} from "../lib/db.ts";
+import Input from "../components/ui/input.tsx";
+import Button from "../components/ui/button.tsx";
 
 type Task = z.infer<typeof TodoTask>;
 type User = z.infer<typeof User>;
 type TasksAndUser = { tasks: Task[]; user: User };
 
-function parseCookie(cookieString: string): Record<string, string> {
-  const cookies: Record<string, string> = {};
-  const cookiePairs = cookieString.split(";");
-
-  for (const cookiePair of cookiePairs) {
-    const [name, value] = cookiePair.trim().split("=");
-    cookies[name] = value;
-  }
-
-  return cookies;
-}
-
-export const handler: Handlers<TasksAndUser | null> = {
-  async GET(req, ctx) {
-    const { userid: userId } = parseCookie(req.headers.get("cookie") ?? "");
-    if (!userId) {
-      // Reload headers
-      return new Response("Please reload!");
-    }
-
+export const handler: Handlers<unknown, TasksAndUser> = {
+  async GET(_, ctx) {
     // Get my tasks
     const tasks = await db.tasks.findMany({
-      where: { userId },
+      where: { userId: ctx.state?.user.id },
     });
 
-    const user = await db.users.findFirst({ where: { id: userId } });
-
-    return ctx.render({ tasks, user });
+    return ctx.render({ tasks, user: ctx.state?.user });
   },
-  async POST(req) {
-    type RequestType = {
-      description: string;
-      userId: string;
-    };
-    const requestBody: RequestType = await req.json();
-    if (!requestBody.description || !requestBody.userId) {
+  async POST(req, ctx) {
+    const form = await req.formData();
+    const description = form.get("description")?.toString();
+
+    if (!description || !ctx.state?.user) {
       return new Response("Bad request", { status: 400 });
     }
-    const createdTask = await db.tasks.create({
+    await db.tasks.create({
       data: {
         id: crypto.randomUUID(),
         createdAt: new Date(),
-        description: requestBody.description,
-        userId: requestBody.userId,
+        description,
+        userId: ctx.state.user.id,
         completed: false,
       },
     });
 
-    return new Response(JSON.stringify(createdTask), {
-      headers: new Headers({ "Content-Type": "application/json" }),
-    });
+    return Response.redirect(req.url);
   },
 };
 
-export default function Home({ data }: PageProps<TasksAndUser | null>) {
+export default function Home(
+  { data: { tasks, user } }: PageProps<TasksAndUser>,
+) {
   return (
     <>
       <Head>
         <title>Pentagon Todo List</title>
       </Head>
-      <div className="hidden h-full flex-1 flex-col space-y-8 p-8 md:flex">
-        <div className="flex items-center justify-between space-y-2">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              Welcome back {data?.user.name}!
-            </h2>
-            <p className="text-muted-foreground">
-              Your user id is{" "}
-              {data?.user.id}, here&apos;s a list of your tasks for this month!
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            {/*<UserNav />*/}
-          </div>
-        </div>
-        {/*<DataTable data={tasks} columns={columns} />*/}
-        {data?.user && <SubmitTask userId={data.user.id} />}
-        {data && data.tasks.length === 0 && <h1>No Tasks Found!</h1>}
-        {data && data.tasks.length > 0 &&
-          data.tasks.map((task) => <h1>{task.description}</h1>)}
-      </div>
+
+      <header className="flex items-center justify-between space-y-2 md:container md:mx-auto py-8 flex-wrap px-4 md:px-0">
+        <p class="text-2xl font-bold tracking-tight">
+          Welcome back {user.name}!
+        </p>
+        <p class="text-muted-foreground">
+          Your user id is{" "}
+          {user.id}, here&apos;s a list of your tasks for this month!
+        </p>
+      </header>
+      <form class="w-full bg-slate-100 py-8 px-4 md:px-0" method="POST">
+        <fieldset class="flex gap-2 md:container md:mx-auto">
+          <Input
+            placeholder="What should I do today?"
+            class="flex-1"
+            name="description"
+          />
+          <Button type="submit">Save</Button>
+        </fieldset>
+      </form>
+      <article class="py-8 md:container md:mx-auto px-4 md:px-0">
+        {tasks.length === 0
+          ? <p>No Tasks Found!</p>
+          : (
+            <ul class="list-disc list-inside">
+              {tasks.map((task) => <li key={task.id}>{task.description}</li>)}
+            </ul>
+          )}
+      </article>
     </>
   );
 }
