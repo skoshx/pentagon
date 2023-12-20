@@ -1,8 +1,8 @@
-import {Head} from "$fresh/runtime.ts";
-import {Handlers, PageProps} from "$fresh/server.ts";
-import {z} from "zod";
+import { Head } from "$fresh/runtime.ts";
+import { Handlers, PageProps } from "$fresh/server.ts";
+import { z } from "zod";
 
-import {db, TodoTask, User} from "../lib/db.ts";
+import { db, TodoTask, User } from "../lib/db.ts";
 import Input from "../components/ui/input.tsx";
 import Button from "../components/ui/button.tsx";
 

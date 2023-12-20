@@ -2,11 +2,12 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.186.0/testing/asserts.ts";
-import { clearMocks, createMockDatabase, User } from "./util.ts";
-import { removeVersionstamp } from "../src/util.ts";
+import { clearMocks, createMockDatabase, Post, User } from "./util.ts";
+import { removeVersionstamp, removeVersionstamps } from "../src/util.ts";
 import { createPentagon } from "../mod.ts";
 import { z } from "../deps.ts";
 import { schemaToKeys } from "../src/keys.ts";
+import { ZodSchema } from "https://deno.land/x/zod@v3.21.4/types.ts";
 
 Deno.test("include", async (t) => {
   const db = createMockDatabase();
@@ -293,5 +294,62 @@ Deno.test("regression #33", async () => {
   assertEquals(typeof meeting.userId, "number");
   assertEquals(typeof meeting.createdAt, "string");
   assertEquals(typeof meeting.updatedAt, "string");
+  kv.close();
+});
+
+Deno.test("regression #44", async () => {
+  const kv = await Deno.openKv();
+
+  const userWithSecondaryIndex = User.extend({
+    // @todo: this should work with `index` too??
+    name: z.string().describe("unique"),
+  });
+
+  const postWithUniqueIndex = Post.extend({
+    title: z.string().describe("unique"),
+  });
+
+  const db = createPentagon(kv, {
+    users: {
+      schema: userWithSecondaryIndex,
+    },
+    posts: {
+      schema: postWithUniqueIndex,
+    },
+  });
+
+  await db.users.deleteMany({});
+  await db.posts.deleteMany({});
+  await clearMocks();
+
+  const userId = crypto.randomUUID();
+  const createdAt = new Date();
+
+  await db.users.create({
+    data: {
+      id: userId,
+      createdAt,
+      name: "John Doe",
+    },
+  });
+
+  // Update by secondary index
+  await db.users.update({
+    where: { name: "John Doe" },
+    data: {
+      name: "Doe John",
+    },
+  });
+
+  // Check that user got updated when updating by secondary index
+  const updatedUsersList = await db.users.findMany({});
+  assertEquals(removeVersionstamps(updatedUsersList), [
+    {
+      id: userId,
+      createdAt,
+      name: "Doe John",
+    },
+  ]);
+
   kv.close();
 });
